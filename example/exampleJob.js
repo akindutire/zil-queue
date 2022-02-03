@@ -1,4 +1,4 @@
-module.exports = class ExampleJob {
+export default class ExampleJob {
     
     static run = (a,b,c) => {
 
