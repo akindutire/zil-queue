@@ -1,10 +1,11 @@
-const QueueTask = require('./queueDao')
+const QueueTask = require('./../../repo/QueueDao')
+const config = require('./../../config')
 const { parentPort } = require('worker_threads');
 
 
 parentPort.on('message', async (job) => {
    
-    console.log(`[zil-js-queue-worker]-Processing item ${job.hash}`)
+    console.log(`${config.cmd.tag} Processing item ${job.hash}`)
    
    
 
