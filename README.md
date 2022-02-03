@@ -1,5 +1,5 @@
 # zil-queue
-A simple queuing engine that works on principle of SJF, FIFO, and multi priority scheduling algorithms
+A simple queuing engine that works on principle of FIFO, SJF, and multi priority scheduling algorithms
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/akindutire/zil-queue)
 ![node-current (tag)](https://img.shields.io/node/v/mongoose/latest)
@@ -25,7 +25,7 @@ const Queue = require('zil-queue')
 
 new Queue(['high','video', 'share', 'default'], {useSJF: true, showQueueList: false})
  //Queue for share
-const job = await Queue.add( 'video',
+const job1 = await Queue.add( 'video',
     async (a, b, c, basePath) => {
         let ExampleJob = require(basePath+'/job/exampleJob.js')
         await ExampleJob.run(a, b, c)
@@ -37,8 +37,8 @@ const job = await Queue.add( 'video',
         path.join(__dirname, '..')
     ],
     {maxRetry: 0, timeout: 5000}
+    )
 
-console.log(job) //{id: 20, hash: def343dfhhehu3hh4, pos: 8}
 
 //To remove a job from a queue
 await Queue.remove('def343dfhhehu3hh4') //true or false
