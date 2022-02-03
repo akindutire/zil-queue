@@ -43,7 +43,7 @@ const job1 = await Queue.add( 'video',
 //To remove a job from a queue
 await Queue.remove('def343dfhhehu3hh4') //true or false
 
-const job2 = await Queue.add( 'hight',
+const job2 = await Queue.add( 'high',
     async (a, b, c) => {
         console.log(`I am on high queue a=${a},b=${b},c=${c}`)
     },
