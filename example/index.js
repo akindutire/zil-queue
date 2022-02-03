@@ -1,7 +1,12 @@
-const Queue = require('./../index').default
+import Queue from './../index'
+import { connect } from 'mongoose'
+
+connect('', { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 10000 }, () => {
+    console.log('DB connected')
+})
 
 new Queue(['high','video', 'share', 'default'], {useSJF: true, showQueueList: false})
- //Queue for share
+
 const job1 = await Queue.add( 'video',
     async (a, b, c, basePath) => {
         let ExampleJob = require(basePath+'/job/exampleJob.js')
