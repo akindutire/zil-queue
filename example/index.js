@@ -1,4 +1,4 @@
-const Queue = require('./../index')
+const Queue = require('./../index').default
 
 new Queue(['high','video', 'share', 'default'], {useSJF: true, showQueueList: false})
  //Queue for share
