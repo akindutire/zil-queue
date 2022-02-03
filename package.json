@@ -1,7 +1,7 @@
 {
   "name": "zil_queue",
-  "version": "1.0.1",
-  "description": "",
+  "version": "1.0.2",
+  "description": "A simple queuing engine that works on principle of SJF, FIFO, and multi priority scheduling algorithms",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
