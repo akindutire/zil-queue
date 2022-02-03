@@ -357,7 +357,7 @@ const schema = new mongoose.Schema({
 
 schema.plugin(AutoIncrement, {inc_field: '_seq'});
 
-const model = mongoose.model('Queue', schema, 'task_queue');
+const model = mongoose.model('Queue', schema, 'zil_task_queue');
 
 
 
