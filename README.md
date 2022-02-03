@@ -43,4 +43,4 @@ await Queue.remove('def343dfhhehu3hh4') //true or false
 Pull requests are welcome, for major change please open an issue to discuss the change.
 
 ## License
-GNU General Public License v3.0
+MIT
