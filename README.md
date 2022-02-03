@@ -1,14 +1,15 @@
-# zil_queue
+# zil-queue
 A simple queuing engine that works on principle of SJF, FIFO, and multi priority scheduling algorithms
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/akindutire/zil-queue)
 ![node-current (tag)](https://img.shields.io/node/v/mongoose/latest)
+![NPM](https://img.shields.io/npm/l/zil_queue)
 
 ## Installation
 Use the package manager [npm](https://www.npmjs.com) to install it.
 
 ```bash
-npm install zil_queue --save
+npm install zil-queue --save
 ```
 
 ## Dependency
