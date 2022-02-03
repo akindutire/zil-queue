@@ -9,6 +9,7 @@ npm install zil-queue --save
 ```
 
 ## Dependency
+![node-current (tag)](https://img.shields.io/node/v/mongoose/latest)
 - mongoose
 
 ## Usage
@@ -36,7 +37,21 @@ const job = await Queue.add( 'video',
 
 console.log(job) //{id: 20, hash: def343dfhhehu3hh4, pos: 8}
 
+//To remove a job from a queue
 await Queue.remove('def343dfhhehu3hh4') //true or false
+
+const job2 = await Queue.add( 'hight',
+    async (a, b, c) => {
+        console.log(`I am on high queue a=${a},b=${b},c=${c}`)
+    },
+    [
+        1, 
+        2, 
+        3
+    ],
+    {maxRetry: 0, timeout: 5000}
+    )
+console.log(job1, job2) //{id: 20, hash: def343dfhhehu3hh4, pos: 8}
 ```
    
 ## Contribution
