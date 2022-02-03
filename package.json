@@ -1,0 +1,19 @@
+{
+  "name": "zil_queue",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mongoose": "^6.2.0",
+    "mongoose-sequence": "^5.3.1",
+    "path": "^0.12.7",
+    "serialize-javascript": "^6.0.0",
+    "uuid": "^8.3.2"
+  }
+}
