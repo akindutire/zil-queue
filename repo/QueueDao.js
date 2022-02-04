@@ -4,7 +4,7 @@ const { startSession, Schema, model: _model } = pkg;
 const AutoIncrement = require('mongoose-sequence')(mongoose);
 import { v4 as uuidv4 } from 'uuid';
 
-export default  class VideoTaskQueue{
+export default  class JobQueue{
     
     constructor(queueName, payload, args, maxRetry, timeout){
         this.payload = payload;

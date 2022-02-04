@@ -1,9 +1,13 @@
 import Queue from './../index'
-import { connect } from 'mongoose'
+import pkg from 'mongoose';
+const { connect } = pkg;
 
-connect('', { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 10000 }, () => {
-    console.log('DB connected')
-})
+connect('mongodb+srv://akin:akin009@cluster0.hsjpc.mongodb.net/meshedpointstore?retryWrites=true&w=majority',
+    { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 10000 }, 
+    () => {
+        console.log('DB connected')
+    }
+)
 
 new Queue(['high','video', 'share', 'default'], {useSJF: true, showQueueList: false})
 

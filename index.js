@@ -2,7 +2,7 @@ import { join } from 'path';
 import { Worker, isMainThread, MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
-import QueueTask, { remove as _remove, release, findByQueueName, countJobs, updateTrial, basedOnHash } from './repo/QueueDao';
+import JobQueue from './repo/QueueDao';
 import config from './config';
 
 export default class Queue {
@@ -40,7 +40,7 @@ export default class Queue {
 
                             if(j != undefined) {
                                 this.#selections.splice(this.#currentJobIndex,1)
-                                await _remove(j.hash)
+                                await JobQueue.remove(j.hash)
                             }
                            
                             this.next()
@@ -52,7 +52,7 @@ export default class Queue {
 
                             if(j != undefined) {
                                 this.#selections.splice(this.#currentJobIndex,1)
-                                await _remove(j.hash)
+                                await JobQueue.remove(j.hash)
                             }
                             
                             this.next()
@@ -68,7 +68,7 @@ export default class Queue {
                                 await this.process(this.#currentJobIndex)
                             }else{
                                 this.#selections.splice(this.#currentJobIndex,1)
-                                await _remove(j.hash)
+                                await JobQueue.remove(j.hash)
                                 this.next()
                             }
                             
@@ -84,7 +84,7 @@ export default class Queue {
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
-                            await _remove(j.hash)
+                            await JobQueue.remove(j.hash)
                         }
                         
                         this.next()                  
@@ -99,7 +99,7 @@ export default class Queue {
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
-                            await _remove(j.hash)
+                            await JobQueue.remove(j.hash)
                         }
                         
                         this.next()                  
@@ -111,10 +111,10 @@ export default class Queue {
                         console.log(`${config.cmd.tag} Restarting queue worker`);
                         for(let job of this.#selections) {
                             if(job.isLocked) {
-                                await release()
+                                await JobQueue.release()
                             }
                         }
-                        new MeshedQueue(this.#queuePriority, this.#options)
+                        new Queue(this.#queuePriority, this.#options)
                     })
 
                     this.#queueWorker.on('online', () => {
@@ -127,7 +127,7 @@ export default class Queue {
 
                     //Listen for new Job, Pick up new task if tray is empty
                     console.log(`${config.cmd.tag} Now listening on task arrival`);
-                    MeshedQueue.eventEmitter.on("newTask", async () => {
+                    Queue.eventEmitter.on("newTask", async () => {
                         console.log(`${config.cmd.tag} New task arrived`);
                         if(this.#selections.length == 0) {
                             
@@ -169,9 +169,9 @@ export default class Queue {
         for(let q of this.#queuePriority) {
             let c
             if (this.#options.useSJF) {
-                c = await findByQueueName(q, true)
+                c = await JobQueue.findByQueueName(q, true)
             }else{
-                c = await findByQueueName(q, false)
+                c = await JobQueue.findByQueueName(q, false)
             }
             this.#selections = [ ...this.#selections, ...c ] 
         }
@@ -197,13 +197,13 @@ export default class Queue {
 
         let fn = serialize(payload)
 
-        const job = new QueueTask(queue, fn, args, options.maxRetry, options.timeout)
+        const job = new JobQueue(queue, fn, args, options.maxRetry, options.timeout)
         
         const ajob = await job.create()
-        const pos = await countJobs()
+        const pos = await JobQueue.countJobs()
 
         //Inform queue
-        MeshedQueue.eventEmitter.emit("newTask")
+        Queue.eventEmitter.emit("newTask")
             
         return {id: ajob._seq, hash: ajob.hash, pos: pos}
         
@@ -247,11 +247,11 @@ export default class Queue {
     }
 
     static remove = async (hash) => {
-        const job = await basedOnHash(hash)
+        const job = await JobQueue.basedOnHash(hash)
         if(job != null) {
             if(!job.isLocked) {
                 //search if in memory too
-                await _remove(hash);
+                await JobQueue.remove(hash);
                 return true
             }
         }
