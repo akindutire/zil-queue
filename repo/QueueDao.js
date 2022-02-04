@@ -1,7 +1,8 @@
 import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model: _model } = pkg;
-const AutoIncrement = require('mongoose-sequence')(mongoose);
+import * as ms from 'mongoose-sequence'
+const AutoIncrement = ms(mongoose);
 import { v4 as uuidv4 } from 'uuid';
 
 export default  class JobQueue{
