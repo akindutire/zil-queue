@@ -1,9 +1,10 @@
-const md5 = require('md5');
-const mongoose = require('mongoose');
+import md5 from 'md5';
+import pkg from 'mongoose';
+const { startSession, Schema, model: _model } = pkg;
 const AutoIncrement = require('mongoose-sequence')(mongoose);
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 
-module.exports =  class VideoTaskQueue{
+export default  class VideoTaskQueue{
     
     constructor(queueName, payload, args, maxRetry, timeout){
         this.payload = payload;
@@ -26,7 +27,7 @@ module.exports =  class VideoTaskQueue{
 
     async create() {
         try{
-            const session = await mongoose.startSession();
+            const session = await startSession();
             try{
 
                 await session.withTransaction( async () => {
@@ -293,7 +294,7 @@ module.exports =  class VideoTaskQueue{
    
 }
 
-const schema = new mongoose.Schema({
+const schema = new Schema({
 
     _seq : {
         type: Number,
@@ -357,9 +358,9 @@ const schema = new mongoose.Schema({
 
 schema.plugin(AutoIncrement, {inc_field: '_seq'});
 
-const model = mongoose.model('Queue', schema, 'zil_task_queue');
+const model = _model('Queue', schema, 'zil_task_queue');
 
 
 
 
-module.exports.QueueSchema = schema;
+export const QueueSchema = schema;

@@ -3,7 +3,7 @@ import { Worker, isMainThread, MessageChannel, parentPort } from 'worker_threads
 import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
 import QueueTask, { remove as _remove, release, findByQueueName, countJobs, updateTrial, basedOnHash } from './repo/QueueDao';
-import { cmd } from './config';
+import config from './config';
 
 export default class Queue {
     
@@ -18,7 +18,7 @@ export default class Queue {
         if(isMainThread) {
             
             const startQueueWorker = new Promise( (resole, reject) => {
-                console.log(`------ ${cmd.tag} Worker started ------`)
+                console.log(`------ ${config.cmd.tag} Worker started ------`)
                 this.#queueWorker =  new Worker( join(__dirname, "/service/worker/QueueWorker.js") );
                 this.#queuePriority.push(...queues)
                 this.#options = { ...this.#options, ...options }
@@ -48,7 +48,7 @@ export default class Queue {
                         } else if(msg == "FAIL_THIS") {
                             let j = this.#selections[this.#currentJobIndex]
 
-                            console.log(`${cmd.tag} Failing item ${j.hash}`)
+                            console.log(`${config.cmd.tag} Failing item ${j.hash}`)
 
                             if(j != undefined) {
                                 this.#selections.splice(this.#currentJobIndex,1)
@@ -64,7 +64,7 @@ export default class Queue {
                             this.#selections[this.#currentJobIndex] = await release(j.hash)
                             
                             if (j.trial < j.maxRetry) {
-                                console.log(`${cmd.tag} Retrying item ${j.hash}`)
+                                console.log(`${config.cmd.tag} Retrying item ${j.hash}`)
                                 await this.process(this.#currentJobIndex)
                             }else{
                                 this.#selections.splice(this.#currentJobIndex,1)
@@ -80,7 +80,7 @@ export default class Queue {
 
                         let j = this.#selections[this.#currentJobIndex]
 
-                        console.log(`${cmd.tag} Worker Failing item ${j.hash}`)
+                        console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
@@ -95,7 +95,7 @@ export default class Queue {
                         //Worker couldn't read message properly
                         let j = this.#selections[this.#currentJobIndex]
 
-                        console.log(`${cmd.tag} Worker Failing item ${j.hash}`)
+                        console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
@@ -107,8 +107,8 @@ export default class Queue {
                     })
 
                     this.#queueWorker.on('exit', async() => {
-                        console.log(`${cmd.tag} Worker-Stopped`);
-                        console.log(`${cmd.tag} Restarting queue worker`);
+                        console.log(`${config.cmd.tag} Worker-Stopped`);
+                        console.log(`${config.cmd.tag} Restarting queue worker`);
                         for(let job of this.#selections) {
                             if(job.isLocked) {
                                 await release()
@@ -118,7 +118,7 @@ export default class Queue {
                     })
 
                     this.#queueWorker.on('online', () => {
-                        console.log(`${cmd.tag} Actively executing`);
+                        console.log(`${config.cmd.tag} Actively executing`);
                     })
 
                     Promise.resolve(true)
@@ -126,9 +126,9 @@ export default class Queue {
                 } ).then( (status) => {
 
                     //Listen for new Job, Pick up new task if tray is empty
-                    console.log(`${cmd.tag} Now listening on task arrival`);
+                    console.log(`${config.cmd.tag} Now listening on task arrival`);
                     MeshedQueue.eventEmitter.on("newTask", async () => {
-                        console.log(`${cmd.tag} New task arrived`);
+                        console.log(`${config.cmd.tag} New task arrived`);
                         if(this.#selections.length == 0) {
                             
                             await this.stageSelection()
@@ -142,12 +142,12 @@ export default class Queue {
                 } ).then( (status) => {
                     //Look out for job every 5sec [free and unfailed job]
                     let intervalId = setInterval( async () => {
-                        console.log(`${cmd.tag} Watchman finding free job`);
+                        console.log(`${config.cmd.tag} Watchman finding free job`);
                         if(this.#selections.length == 0) {
                             await this.stageSelection()
                             this.next()
                         }else{
-                            console.log(`${cmd.tag} Watchman tray is not empty yet`);
+                            console.log(`${config.cmd.tag} Watchman tray is not empty yet`);
                         }
                     }, 60000 )
 
@@ -177,7 +177,7 @@ export default class Queue {
         }
         this.#currentJobIndex = -1;
         
-        console.log(`${cmd.tag} ${this.#selections.length} tasks queued`);
+        console.log(`${config.cmd.tag} ${this.#selections.length} tasks queued`);
         if(this.#options.showQueueList) {
             console.log(this.#selections)
         }
@@ -217,7 +217,7 @@ export default class Queue {
             if (!job.isLocked) {
                 
                 if(typeof job.payload != 'string'){
-                    console.log(`${cmd.tag} Skipping ${job.hash}`)
+                    console.log(`${config.cmd.tag} Skipping ${job.hash}`)
                     this.#selections.splice(jobStageIndex, 1)
                     this.next()
                 }else{
@@ -229,7 +229,7 @@ export default class Queue {
                 }
                 
             }else{
-                console.log(`${cmd.tag} Skipping ${job.hash}`)
+                console.log(`${config.cmd.tag} Skipping ${job.hash}`)
                 this.#selections.splice(jobStageIndex, 1)
                 this.next()
             }
@@ -239,7 +239,7 @@ export default class Queue {
                 this.#selections.splice(jobStageIndex, 1)
                 this.next()
             }else{
-                console.log(`${cmd.tag} Queue relaxed, no task to process`)
+                console.log(`${config.cmd.tag} Queue relaxed, no task to process`)
             }
 
         }
@@ -264,10 +264,10 @@ export default class Queue {
         this.#currentJobIndex = 0 
         if(this.#selections.length > 0) {
             let j = this.#selections[0]
-            console.log(`${cmd.tag} Moving to item ${j.hash}`);
+            console.log(`${config.cmd.tag} Moving to item ${j.hash}`);
             await this.process(this.#currentJobIndex)
         }else{
-            console.log(`${cmd.tag} Queue relaxed, no task to process`);
+            console.log(`${config.cmd.tag} Queue relaxed, no task to process`);
         }
         
     }

@@ -1,13 +1,10 @@
-const QueueTask = require('./../../repo/QueueDao')
-const config = require('./../../config')
-const { parentPort } = require('worker_threads');
+import  config from './../../config';
+import { parentPort } from 'worker_threads';
 
 
 parentPort.on('message', async (job) => {
    
     console.log(`${config.cmd.tag} Processing item ${job.hash}`)
-   
-   
 
     try {
     

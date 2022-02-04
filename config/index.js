@@ -1,7 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-module.exports = {
+export default config = {
 
     env: process.env.NODE_ENV,
     cmd: {
