@@ -21,7 +21,7 @@ export default class Queue {
             const startQueueWorker = new Promise( (resole, reject) => {
                 console.log(`------ ${config.cmd.tag} Worker started ------`)
                 const __dirname = resolve();
-                
+                console.log(__dirname)
                 this.#queueWorker =  new Worker(join(__dirname,"/service/worker/QueueWorker.js"));
                 this.#queuePriority.push(...queues)
                 Queue.queues = [...queues]
