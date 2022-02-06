@@ -170,7 +170,7 @@ export default class Queue {
                     }else{
                         console.log(`${config.cmd.tag} Watchman tray is not empty yet`);
                     }
-                }, this.options.refreshPeriod )
+                }, this.#options.refreshPeriod )
 
                 Promise.resolve(intervalId)
             }).then( (intervalId) => {
