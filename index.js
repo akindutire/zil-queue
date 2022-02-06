@@ -13,16 +13,19 @@ export default class Queue {
     #queueWorker
     #options = {useSJF: false, showQueueList: true}
     static eventEmitter = new EventEmitter();
+    static queues = [];
 
     constructor(queues, options) {
         if(isMainThread) {
-            
+            console.log(process.cwd())
             const startQueueWorker = new Promise( (resole, reject) => {
                 console.log(`------ ${config.cmd.tag} Worker started ------`)
-                this.#queueWorker =  new Worker( join(__dirname, "/service/worker/QueueWorker.js") );
+                this.#queueWorker =  new Worker( join(process.cwd(), "/service/worker/QueueWorker.js") );
                 this.#queuePriority.push(...queues)
+                Queue.queues = [...queues]
                 this.#options = { ...this.#options, ...options }
 
+            
                 resole(true)
             } )
             
@@ -165,111 +168,132 @@ export default class Queue {
     }
 
     stageSelection = async () => {
-        //FIFO, SJF, Multi-level Priority
-        for(let q of this.#queuePriority) {
-            let c
-            if (this.#options.useSJF) {
-                c = await JobQueue.findByQueueName(q, true)
-            }else{
-                c = await JobQueue.findByQueueName(q, false)
+        try{
+            //FIFO, SJF, Multi-level Priority
+            
+            for(let q of this.#queuePriority) {
+                let c
+                if (this.#options.useSJF) {
+                    c = await JobQueue.findByQueueName(q, true)
+                }else{
+                    c = await JobQueue.findByQueueName(q, false)
+                }
+                this.#selections = [ ...this.#selections, ...c ] 
             }
-            this.#selections = [ ...this.#selections, ...c ] 
+            this.#currentJobIndex = -1;
+            
+            console.log(`${config.cmd.tag} ${this.#selections.length} tasks queued`);
+            if(this.#options.showQueueList) {
+                console.log(this.#selections)
+            }
+        }catch(e) {
+            console.log(e);
         }
-        this.#currentJobIndex = -1;
-        
-        console.log(`${config.cmd.tag} ${this.#selections.length} tasks queued`);
-        if(this.#options.showQueueList) {
-            console.log(this.#selections)
-        }
-
     }
 
     static add = async (queue, payload, args = [], options = {} ) => {
+        try{
         
-        let defaultopts = { maxRetry: 3, timeout: 50000}
+            if(!Queue.queues.includes(queue)) {
+                throw new Error(`${queue} not found on queue priority list`) 
+            }
 
-        options =  { ...defaultopts, ...options}
-        
-        
-        if(typeof payload != 'function') {
-            throw new Error("Only function is accepted as payload")
-        }
+            let defaultopts = { maxRetry: 3, timeout: 50000}
 
-        let fn = serialize(payload)
-
-        const job = new JobQueue(queue, fn, args, options.maxRetry, options.timeout)
-        
-        const ajob = await job.create()
-        const pos = await JobQueue.countJobs()
-
-        //Inform queue
-        Queue.eventEmitter.emit("newTask")
+            options =  { ...defaultopts, ...options}
             
-        return {id: ajob._seq, hash: ajob.hash, pos: pos}
+            
+            if(typeof payload != 'function') {
+                throw new Error("Only function is accepted as payload")
+            }
+
+            let fn = serialize(payload)
+
+            const job = new JobQueue(queue, fn, args, options.maxRetry, options.timeout)
+            
+            const ajob = await job.create()
+            const pos = await JobQueue.countJobs()
+
+            //Inform queue
+            Queue.eventEmitter.emit("newTask")
+                
+            return { hash: ajob.hash, pos: pos }
+        }catch(e) {
+            console.log(e);
+        }
         
     }
 
     process = async (jobStageIndex) => {
-        
-        const job = this.#selections[jobStageIndex]
-        
-        if (job !=  null || job != undefined) {
-            if (!job.isLocked) {
-                
-                if(typeof job.payload != 'string'){
+        try{
+            const job = this.#selections[jobStageIndex]
+            
+            if (job !=  null || job != undefined) {
+                if (!job.isLocked) {
+                    
+                    if(typeof job.payload != 'string'){
+                        console.log(`${config.cmd.tag} Skipping ${job.hash}`)
+                        this.#selections.splice(jobStageIndex, 1)
+                        this.next()
+                    }else{
+                        
+                        //Auto lock
+                        await JobQueue.updateTrial(job.hash)
+                        this.#queueWorker.postMessage({hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
+
+                    }
+                    
+                }else{
                     console.log(`${config.cmd.tag} Skipping ${job.hash}`)
                     this.#selections.splice(jobStageIndex, 1)
                     this.next()
-                }else{
-                    
-                    //Auto lock
-                    await updateTrial(job.hash)
-                    this.#queueWorker.postMessage({hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
-
                 }
-                
             }else{
-                console.log(`${config.cmd.tag} Skipping ${job.hash}`)
-                this.#selections.splice(jobStageIndex, 1)
-                this.next()
-            }
-        }else{
-            //incase of disjoint
-            if(this.#selections.length > 0){
-                this.#selections.splice(jobStageIndex, 1)
-                this.next()
-            }else{
-                console.log(`${config.cmd.tag} Queue relaxed, no task to process`)
-            }
+                //incase of disjoint
+                if(this.#selections.length > 0){
+                    this.#selections.splice(jobStageIndex, 1)
+                    this.next()
+                }else{
+                    console.log(`${config.cmd.tag} Queue relaxed, no task to process`)
+                }
 
+            }
+        }catch(e) {
+            console.log(e);
         }
-
     }
 
     static remove = async (hash) => {
-        const job = await JobQueue.basedOnHash(hash)
-        if(job != null) {
-            if(!job.isLocked) {
-                //search if in memory too
-                await JobQueue.remove(hash);
-                return true
+        try{
+            const job = await JobQueue.basedOnHash(hash)
+            if(job != null) {
+                if(!job.isLocked) {
+                    //search if in memory too
+                    await JobQueue.remove(hash);
+                    return true
+                }
             }
-        }
 
-        return false
+            return false
+        }catch(e) {
+            console.log(e);
+        }
     }
 
 
     next = async () => {
-        this.#currentJobIndex = 0 
-        if(this.#selections.length > 0) {
-            let j = this.#selections[0]
-            console.log(`${config.cmd.tag} Moving to item ${j.hash}`);
-            await this.process(this.#currentJobIndex)
-        }else{
-            console.log(`${config.cmd.tag} Queue relaxed, no task to process`);
+        try{
+            this.#currentJobIndex = 0 
+            if(this.#selections.length > 0) {
+                let j = this.#selections[0]
+                console.log(`${config.cmd.tag} Moving to item ${j.hash}`);
+                await this.process(this.#currentJobIndex)
+            }else{
+                console.log(`${config.cmd.tag} Queue relaxed, no task to process`);
+            }
+        }catch(e) {
+            console.log(e);
         }
-        
     }
 
 

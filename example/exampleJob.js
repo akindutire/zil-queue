@@ -1,13 +1,16 @@
-export default class ExampleJob {
+export async function run(a,b,c) {
     
-    static run = (a,b,c) => {
-
-        return await new Promise( (resolve, reject) => {
-            setTimeout( () => {
+    try {
+        return await new Promise((resolve, reject) => {
+            setTimeout(() => {
                 console.log("I want to resolve")
                 resolve(true)
-            }, 2000 )
-        } ).catch ( e => console.log(e.message) )
+            }, 2000)
+        })
+    } catch (e) {
+        return console.log(e.message)
     }
+    
 
 }
+

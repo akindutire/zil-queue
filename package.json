@@ -1,6 +1,6 @@
 {
   "name": "@akindutire/zil-queue",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A simple queuing engine that works on principle of SJF, FIFO, and multi priority scheduling algorithms",
   "main": "index.js",
   "type": "module",
@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.0.0",
+    "md5": "^2.3.0",
     "mongoose": "^6.2.0",
     "mongoose-sequence": "^5.3.1",
     "path": "^0.12.7",

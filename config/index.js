@@ -1,7 +1,8 @@
-const dotenv = require('dotenv');
-dotenv.config();
+import {config} from 'dotenv';
 
-export default config = {
+config();
+
+export default {
 
     env: process.env.NODE_ENV,
     cmd: {

@@ -1,8 +1,6 @@
 import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model: _model } = pkg;
-import * as ms from 'mongoose-sequence'
-const AutoIncrement = ms(mongoose);
 import { v4 as uuidv4 } from 'uuid';
 
 export default  class JobQueue{
@@ -114,7 +112,7 @@ export default  class JobQueue{
         }
     }
 
-    static async fetchFirstShouldBeProcessed() {
+    static async fetchPristine() {
         try{
        
             const result = await model.findOne({isFailed: false});
@@ -171,38 +169,6 @@ export default  class JobQueue{
        
     }
 
-    static async findBySeq(seq) {
-        try{
-       
-            const result = await model.findOne({_seq: seq});
-
-            if(result === null){
-                return null;                
-            }
-
-            return result;   
-        
-        }catch(e){
-            throw e;
-        }
-    }
-
-    static async find(contentId) {
-        try{
-       
-            const result = await model.findOne({foreign_content_id: contentId});
-
-            if(result === null){
-                return null;                
-            }
-
-            return result;   
-        
-        }catch(e){
-            throw e;
-        }
-       
-    }
 
     static async basedOnHash(hash) {
         try{
@@ -297,11 +263,6 @@ export default  class JobQueue{
 
 const schema = new Schema({
 
-    _seq : {
-        type: Number,
-        unique: true
-    },
-
     queue_name : {
         type: String,
         required: [true, "Queue name required"],
@@ -356,8 +317,6 @@ const schema = new Schema({
     }
 
 });
-
-schema.plugin(AutoIncrement, {inc_field: '_seq'});
 
 const model = _model('Queue', schema, 'zil_task_queue');
 
