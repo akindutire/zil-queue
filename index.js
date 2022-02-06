@@ -30,16 +30,18 @@ export default class Queue {
                 try{
 
                     pkgPath = await getInstalledPath(config.packageName, {local: true})
-                    console.log(pkgPath)
     
                 } catch(e) {
-                    console.log(e)
+                    
                     pkgPath = __dirname
+                    console.log("Using base dir "+pkgPath);
+
                 }
 
                 this.#queueWorker =  new Worker(join(pkgPath, "/service/worker/QueueWorker.js"));
 
-                console.log(`------ ${config.cmd.tag} Worker started ------`)
+                console.log(`------ ${config.cmd.tag} Worker started ------`);
+
                 this.#queuePriority.push(...queues)
                 Queue.queues = [...queues]
                 this.#options = { ...this.#options, ...options }
