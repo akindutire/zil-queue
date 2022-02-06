@@ -15,7 +15,7 @@ export default class Queue {
     #queuePriority = []
     #selections = []
     #queueWorker
-    #options = {useSJF: false, showQueueList: true}
+    #options = {useSJF: false, showQueueList: true, refreshPeriod: 60000}
     static eventEmitter = new EventEmitter();
     static queues = [];
 
@@ -170,7 +170,7 @@ export default class Queue {
                     }else{
                         console.log(`${config.cmd.tag} Watchman tray is not empty yet`);
                     }
-                }, 60000 )
+                }, this.options.refreshPeriod )
 
                 Promise.resolve(intervalId)
             }).then( (intervalId) => {
