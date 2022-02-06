@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { Worker, isMainThread, MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
@@ -20,7 +20,9 @@ export default class Queue {
             console.log(process.cwd())
             const startQueueWorker = new Promise( (resole, reject) => {
                 console.log(`------ ${config.cmd.tag} Worker started ------`)
-                this.#queueWorker =  new Worker("./service/worker/QueueWorker.js");
+                const __dirname = resolve();
+                
+                this.#queueWorker =  new Worker(join(__dirname,"/service/worker/QueueWorker.js"));
                 this.#queuePriority.push(...queues)
                 Queue.queues = [...queues]
                 this.#options = { ...this.#options, ...options }
