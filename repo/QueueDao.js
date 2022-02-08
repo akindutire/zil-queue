@@ -3,7 +3,7 @@ import pkg from 'mongoose';
 const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
 
-export default  class JobQueue{
+export default class JobQueue{
     
     constructor(queueName, payload, args, maxRetry, timeout){
         this.payload = payload;
@@ -318,7 +318,7 @@ const schema = new Schema({
 
 });
 
-const m = model('ZilTaskQueue', schema);
+const m = model('ZilJobQueue', schema);
 
 
 
