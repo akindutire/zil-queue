@@ -1,9 +1,13 @@
-import { join } from 'path';
+import { getInstalledPath } from 'get-installed-path';
+import { join, resolve } from 'path';
 import { Worker, isMainThread, MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
 import JobQueue from './repo/QueueDao';
 import config from './config';
+
+const __dirname = resolve();
+
 
 export default class Queue {
     
@@ -11,158 +15,172 @@ export default class Queue {
     #queuePriority = []
     #selections = []
     #queueWorker
-    #options = {useSJF: false, showQueueList: true}
+    #options = {useSJF: false, showQueueList: true, refreshPeriod: 60000}
     static eventEmitter = new EventEmitter();
     static queues = [];
 
     constructor(queues, options) {
         if(isMainThread) {
-            console.log(process.cwd())
-            const startQueueWorker = new Promise( (resole, reject) => {
-                console.log(`------ ${config.cmd.tag} Worker started ------`)
-                this.#queueWorker =  new Worker( join(process.cwd(), "/service/worker/QueueWorker.js") );
+            
+            new Promise( (resolve, reject) => {
+                resolve('start')
+            }).then( async (data) => {
+
+                let pkgPath
+                try{
+
+                    pkgPath = await getInstalledPath(config.packageName, {local: true})
+    
+                } catch(e) {
+                    
+                    pkgPath = __dirname
+                    console.log("Using base dir "+pkgPath);
+
+                }
+
+                this.#queueWorker =  new Worker(join(pkgPath, "/service/worker/QueueWorker.js"));
+
+                console.log(`------ ${config.cmd.tag} Worker started ------`);
+
                 this.#queuePriority.push(...queues)
                 Queue.queues = [...queues]
                 this.#options = { ...this.#options, ...options }
-
             
-                resole(true)
+                return Promise.resolve(true)
             } )
-            
-            startQueueWorker
-                .then( async (status) => {
-                    await this.stageSelection()
-                    Promise.resolve(true)
-                } )
-                .then( (status) => {
-                    //Listen to queue event
-                    this.#queueWorker.on("message", async (msg) => {
-                        if (msg === "MOVE_NEXT") {
-                            
-                            let j = this.#selections[this.#currentJobIndex]
-
-                            if(j != undefined) {
-                                this.#selections.splice(this.#currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
-                            }
-                           
-                            this.next()
-
-                        } else if(msg == "FAIL_THIS") {
-                            let j = this.#selections[this.#currentJobIndex]
-
-                            console.log(`${config.cmd.tag} Failing item ${j.hash}`)
-
-                            if(j != undefined) {
-                                this.#selections.splice(this.#currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
-                            }
-                            
-                            this.next()
-                                                    
-                        } else if(msg == "RETRY_THIS") {
-                            
-                            let j = this.#selections[this.#currentJobIndex]
-                            //update job list
-                            this.#selections[this.#currentJobIndex] = await release(j.hash)
-                            
-                            if (j.trial < j.maxRetry) {
-                                console.log(`${config.cmd.tag} Retrying item ${j.hash}`)
-                                await this.process(this.#currentJobIndex)
-                            }else{
-                                this.#selections.splice(this.#currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
-                                this.next()
-                            }
-                            
-                        }
-
-                    })
-
-                    this.#queueWorker.on("error", async (err) => {
-
+            .then( async (status) => {
+                await this.stageSelection()
+                Promise.resolve(true)
+            } )
+            .then( (status) => {
+                //Listen to queue event
+                this.#queueWorker.on("message", async (msg) => {
+                    if (msg === "MOVE_NEXT") {
+                        
                         let j = this.#selections[this.#currentJobIndex]
-
-                        console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
                             await JobQueue.remove(j.hash)
                         }
                         
-                        this.next()                  
-                        
-                    })
+                        this.next()
 
-                    this.#queueWorker.on("messageerror", async (err) => {
-                        //Worker couldn't read message properly
+                    } else if(msg == "FAIL_THIS") {
                         let j = this.#selections[this.#currentJobIndex]
 
-                        console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
+                        console.log(`${config.cmd.tag} Failing item ${j.hash}`)
 
                         if(j != undefined) {
                             this.#selections.splice(this.#currentJobIndex,1)
                             await JobQueue.remove(j.hash)
                         }
                         
-                        this.next()                  
+                        this.next()
+                                                
+                    } else if(msg == "RETRY_THIS") {
                         
-                    })
-
-                    this.#queueWorker.on('exit', async() => {
-                        console.log(`${config.cmd.tag} Worker-Stopped`);
-                        console.log(`${config.cmd.tag} Restarting queue worker`);
-                        for(let job of this.#selections) {
-                            if(job.isLocked) {
-                                await JobQueue.release()
-                            }
-                        }
-                        new Queue(this.#queuePriority, this.#options)
-                    })
-
-                    this.#queueWorker.on('online', () => {
-                        console.log(`${config.cmd.tag} Actively executing`);
-                    })
-
-                    Promise.resolve(true)
-
-                } ).then( (status) => {
-
-                    //Listen for new Job, Pick up new task if tray is empty
-                    console.log(`${config.cmd.tag} Now listening on task arrival`);
-                    Queue.eventEmitter.on("newTask", async () => {
-                        console.log(`${config.cmd.tag} New task arrived`);
-                        if(this.#selections.length == 0) {
-                            
-                            await this.stageSelection()
-                            this.next()
-
-                        }
-                    })
-
-                    Promise.resolve(true)
-
-                } ).then( (status) => {
-                    //Look out for job every 5sec [free and unfailed job]
-                    let intervalId = setInterval( async () => {
-                        console.log(`${config.cmd.tag} Watchman finding free job`);
-                        if(this.#selections.length == 0) {
-                            await this.stageSelection()
-                            this.next()
+                        let j = this.#selections[this.#currentJobIndex]
+                        //update job list
+                        this.#selections[this.#currentJobIndex] = await release(j.hash)
+                        
+                        if (j.trial < j.maxRetry) {
+                            console.log(`${config.cmd.tag} Retrying item ${j.hash}`)
+                            await this.process(this.#currentJobIndex)
                         }else{
-                            console.log(`${config.cmd.tag} Watchman tray is not empty yet`);
+                            this.#selections.splice(this.#currentJobIndex,1)
+                            await JobQueue.remove(j.hash)
+                            this.next()
                         }
-                    }, 60000 )
+                        
+                    }
 
-                    Promise.resolve(intervalId)
-                }).then( (intervalId) => {
-                    //Execute next on queue
+                })
+
+                this.#queueWorker.on("error", async (err) => {
+
+                    let j = this.#selections[this.#currentJobIndex]
+
+                    console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
+
+                    if(j != undefined) {
+                        this.#selections.splice(this.#currentJobIndex,1)
+                        await JobQueue.remove(j.hash)
+                    }
                     
-                    this.next()
+                    this.next()                  
                     
-                } ).catch( (err) => {
-                    console.log(err)
-                } )
+                })
+
+                this.#queueWorker.on("messageerror", async (err) => {
+                    //Worker couldn't read message properly
+                    let j = this.#selections[this.#currentJobIndex]
+
+                    console.log(`${config.cmd.tag} Worker Failing item ${j.hash}`)
+
+                    if(j != undefined) {
+                        this.#selections.splice(this.#currentJobIndex,1)
+                        await JobQueue.remove(j.hash)
+                    }
+                    
+                    this.next()                  
+                    
+                })
+
+                this.#queueWorker.on('exit', async() => {
+                    console.log(`${config.cmd.tag} Worker-Stopped`);
+                    console.log(`${config.cmd.tag} Restarting queue worker`);
+                    for(let job of this.#selections) {
+                        if(job.isLocked) {
+                            await JobQueue.release()
+                        }
+                    }
+                    new Queue(this.#queuePriority, this.#options)
+                })
+
+                this.#queueWorker.on('online', () => {
+                    console.log(`${config.cmd.tag} Actively executing`);
+                })
+
+                Promise.resolve(true)
+
+            } ).then( (status) => {
+
+                //Listen for new Job, Pick up new task if tray is empty
+                console.log(`${config.cmd.tag} Now listening on task arrival`);
+                Queue.eventEmitter.on("newTask", async () => {
+                    console.log(`${config.cmd.tag} New task arrived`);
+                    if(this.#selections.length == 0) {
+                        
+                        await this.stageSelection()
+                        this.next()
+
+                    }
+                })
+
+                Promise.resolve(true)
+
+            } ).then( (status) => {
+                //Look out for job every 5sec [free and unfailed job]
+                let intervalId = setInterval( async () => {
+                    console.log(`${config.cmd.tag} Watchman finding free job`);
+                    if(this.#selections.length == 0) {
+                        await this.stageSelection()
+                        this.next()
+                    }else{
+                        console.log(`${config.cmd.tag} Watchman tray is not empty yet`);
+                    }
+                }, this.#options.refreshPeriod )
+
+                Promise.resolve(intervalId)
+            }).then( (intervalId) => {
+                //Execute next on queue
+                
+                this.next()
+                
+            } ).catch( (err) => {
+                console.log(err)
+            } )
         }
 
     }
