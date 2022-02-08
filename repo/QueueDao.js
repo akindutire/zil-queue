@@ -318,7 +318,7 @@ const schema = new Schema({
 
 });
 
-const m = model('ZilTaskQueue', schema, 'ziltaskqueues');
+const m = model('ZilTaskQueue', schema);
 
 
 
