@@ -1,6 +1,6 @@
 import md5 from 'md5';
 import pkg from 'mongoose';
-const { startSession, Schema, model: _model } = pkg;
+const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
 
 export default  class JobQueue{
@@ -33,7 +33,7 @@ export default  class JobQueue{
                     
                     this.hash = this.calculateTaskHash();
             
-                    await model.create({
+                    await m.create({
                         queue_name: this.queueName,
                         hash: this.hash,
                         payload: this.payload,
@@ -64,7 +64,7 @@ export default  class JobQueue{
     static async countJobs() {
         try{
        
-            const count = await model.countDocuments({isFailed: false});
+            const count = await m.countDocuments({isFailed: false});
             return count;   
         
         }catch(e){
@@ -76,7 +76,7 @@ export default  class JobQueue{
     static async fetch() {
         try{
        
-            const result = await model.find({isFailed: false});
+            const result = await m.find({isFailed: false});
 
             if(result === null){
                 return null;                
@@ -96,9 +96,9 @@ export default  class JobQueue{
        
             let result
             if(useSJF) {
-                result = await model.find({queue_name: q.trim(), isFailed: false, isLocked: false}).sort({timeout: 1});
+                result = await m.find({queue_name: q.trim(), isFailed: false, isLocked: false}).sort({timeout: 1});
             }else{
-                result = await model.find({queue_name: q.trim(), isFailed: false, isLocked: false});
+                result = await m.find({queue_name: q.trim(), isFailed: false, isLocked: false});
             }
 
             if(result === null){
@@ -115,7 +115,7 @@ export default  class JobQueue{
     static async fetchPristine() {
         try{
        
-            const result = await model.findOne({isFailed: false});
+            const result = await m.findOne({isFailed: false});
 
             if(result === null){
                 return null;                
@@ -132,7 +132,7 @@ export default  class JobQueue{
     static async fetchFailed() {
         try{
        
-            const result = await model.find({isFailed: true});
+            const result = await m.find({isFailed: true});
 
             if(result === null){
                 return null;                
@@ -149,7 +149,7 @@ export default  class JobQueue{
     static async fail(hash) {
         try{
        
-            const result = await model.findOne({hash: hash});
+            const result = await m.findOne({hash: hash});
 
             if(result === null){
                 return false;                
@@ -173,7 +173,7 @@ export default  class JobQueue{
     static async basedOnHash(hash) {
         try{
 
-            const result = await model.findOne({hash: hash});
+            const result = await m.findOne({hash: hash});
 
             if(result === null){
                 return null;                
@@ -189,7 +189,7 @@ export default  class JobQueue{
     static async updateTrial(hash) {
         try{
 
-            const result = await model.findOne({hash: hash});
+            const result = await m.findOne({hash: hash});
 
             if ( !result.isLocked ){
                 result.trial = parseInt(result.trial) + 1;
@@ -210,7 +210,7 @@ export default  class JobQueue{
     static async lock(hash) {
         try{
 
-            const result = await model.findOne({hash: hash});
+            const result = await m.findOne({hash: hash});
 
             if ( result != null || !result.isLocked ){
                 result.isLocked = true;
@@ -230,7 +230,7 @@ export default  class JobQueue{
     static async release(hash) {
         try{
 
-            const result = await model.findOne({hash: hash});
+            const result = await m.findOne({hash: hash});
 
             if ( result != null ){
                 result.isLocked = false;
@@ -250,7 +250,7 @@ export default  class JobQueue{
     static async remove(hash) {
         try{
        
-            await model.deleteOne({hash: hash});
+            await m.deleteOne({hash: hash});
         
         }catch(e){
             throw e;
@@ -318,7 +318,7 @@ const schema = new Schema({
 
 });
 
-const model = _model('Queue', schema, 'zil_task_queue');
+const m = model('Queue', schema, 'zil_task_queue');
 
 
 
