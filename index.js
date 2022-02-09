@@ -211,7 +211,6 @@ export default class Queue {
 
     static add = async (queue, payload, args = [], options = {} ) => {
         try{
-        
             if(!Queue.queues.includes(queue)) {
                 throw new Error(`${queue} not found on queue priority list`) 
             }

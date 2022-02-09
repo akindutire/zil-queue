@@ -13,7 +13,6 @@ connect('mongodb+srv://akin:akin009@cluster0.hsjpc.mongodb.net/meshedpointstore?
 
 new Queue(['high','video', 'share', 'default'], {useSJF: true, showQueueList: false})
 
-
 const job1 = await Queue.add( 'video',
     async (a, b, c, basePath) => {
         
