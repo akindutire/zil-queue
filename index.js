@@ -1,4 +1,4 @@
-import { getInstalledPath } from 'get-installed-path';
+impo 
 import { join, resolve } from 'path';
 import { Worker, isMainThread, MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';

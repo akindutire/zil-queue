@@ -17,7 +17,7 @@ npm install @akindutire/zil-queue --save
 ## Usage
 
 ```node
-const Queue = require('zil-queue')
+const Queue = require('@akindutire/zil-queue')
 
  //start the queue engine
  // ['high', 'video', 'share', 'default'] is the multi priority list, task on the high queue will get executed before the video queue
