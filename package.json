@@ -2,15 +2,19 @@
   "name": "@akindutire/zil-queue",
   "version": "1.0.31",
   "description": "A simple queuing engine that works on principle of SJF, FIFO, and multi priority scheduling algorithms",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/md5": "^2.3.5",
+    "@types/serialize-javascript": "^5.0.4",
     "dotenv": "^16.0.0",
     "get-installed-path": "^4.0.8",
     "md5": "^2.3.0",
