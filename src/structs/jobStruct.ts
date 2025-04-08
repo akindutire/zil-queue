@@ -8,5 +8,6 @@ export interface Job {
     maxRetry: number,
     trial: number,
     timeout: number,
-    createdAt: string
+    createdAt: string,
+    modifiedAt: string,
 }

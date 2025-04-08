@@ -91,6 +91,30 @@ export class MongoJobStore implements JobStore {
        
     }
 
+    async _fetchFreeHashes(q: Queue) : Promise<string[]>{
+        try{
+       
+            let result
+            if(q.algo == "SJF") {
+                result = await m.find({isFailed: false, isLocked: false, queue: q.name.trim()}).select(['hash']).sort({timeout: 1});
+            } else if( q.algo == "FIFO" ) {
+                result = await m.find({isFailed: false, isLocked: false, queue: q.name.trim()}).select(['hash']).sort({createdAt: 1});
+            } else {
+                throw Error(`Queue scheduling algorithm ${q?.algo} not supported`)
+            }
+
+            if(result === null){
+                return [];                
+            }
+
+            return result;   
+        
+        }catch(e){
+            throw e;
+        }
+       
+    }
+
     async _fetchOne(hash: string) : Promise<Job|null>{
         try{
        
@@ -175,7 +199,7 @@ export class MongoJobStore implements JobStore {
        
     }
 
-    async _release(hash: string): Promise<boolean> {
+    async _release(hash: string): Promise<Job> {
         try{
 
             const result = await m.findOne({hash: hash});
