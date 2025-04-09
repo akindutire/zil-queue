@@ -1,7 +1,7 @@
 export interface Job {
     queue: string
     hash: string,
-    payload: {[key: string|number] : string},
+    payload: string,
     isLocked: boolean,
     isFailed: boolean,
     args: any[],

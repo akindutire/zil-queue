@@ -20,7 +20,7 @@ export class MongoJobStore implements JobStore {
         }
     }
 
-    async _stash(queueName: string, payload: {[key: string|number] : string}, args: any[], maxRetry:number, timeout:number) : Promise<Job> {
+    async _stash(queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) : Promise<Job> {
         try{
             const session = await startSession();
             try{

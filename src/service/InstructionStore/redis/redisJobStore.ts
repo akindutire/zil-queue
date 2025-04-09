@@ -46,7 +46,7 @@ export class RedisJobStore implements JobStore {
         return await this.client.exists(this.getJobKey(hash)) === 1;
     }
     
-    async _stash(queueName: string, payload: {[key: string|number]: string}, args: any[], maxRetry: number, timeout: number): Promise<Job> {
+    async _stash(queueName: string, payload: string, args: any[], maxRetry: number, timeout: number): Promise<Job> {
         try {
             const hash = this.calculateTaskHash(queueName, payload);
             const jobKey = this.getJobKey(hash);
