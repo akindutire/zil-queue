@@ -5,6 +5,9 @@ import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
 import { Config } from './structs/configStruct';
 import { Queue } from './structs/queueStruct';
+import { JobStore } from './structs/jobStoreStruct';
+import { JobStoreFactory } from './factory/jobStoreFactory';
+import { Job } from './structs/jobStruct';
 
 class zJobber {
     private eventEmitter: EventEmitter;
@@ -14,11 +17,13 @@ class zJobber {
     private tag: string = '';
     private stagedJobRefs: string[] = [];
     private queueFlatMap: string[] = [];
+    private jobStore: JobStore
      
     constructor(private queues: Queue[], private config: Config) {
         if(isMainThread) {
             new Promise( (resolve, reject) => {
                     this.queueFlatMap =this.queues.flatMap( (q) => { return q.name; } );
+                    this.jobStore = (new JobStoreFactory()).make(config.connectionString)
                     resolve('start')
                 })
                 .then( async (data) => {
@@ -39,39 +44,38 @@ class zJobber {
                     this.nodeWorker.on("message", async (msg) => {
                         if (msg === "MOVE_NEXT") {
                             
-                            let j = this.stagedJobRefs[this.currentJobIndex]
-
-                            if(j != undefined) {
+                            let hash = this.stagedJobRefs[this.currentJobIndex]
+                            let j: Job|null = await this.jobStore._fetchOne(hash)
+                            if(j) {
                                 this.stagedJobRefs.splice(this.currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
+                                await this.jobStore._purge(j.hash)
                             }
                             
                             this.next()
 
                         } else if(msg == "FAIL_THIS") {
-                            let j = this.stagedJobRefs[this.currentJobIndex]
+                            let hash = this.stagedJobRefs[this.currentJobIndex]
 
-                            process.stdout.write(`${this.tag} Failing item ${j.hash}`)
+                            process.stdout.write(`${this.tag} Failing item ${hash}`)
 
-                            if(j != undefined) {
+                            if(hash != undefined) {
                                 this.stagedJobRefs.splice(this.currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
+                                await this.jobStore._fail(hash)
                             }
                             
                             this.next()
                                                     
                         } else if(msg == "RETRY_THIS") {
                             
-                            let j = this.stagedJobRefs[this.currentJobIndex]
+                            let hash = this.stagedJobRefs[this.currentJobIndex]
                             //update job list
-                            this.stagedJobRefs[this.currentJobIndex] = await this.release(j.hash)
-                            
+                            let j = await this.jobStore._release(hash)
                             if (j.trial < j.maxRetry) {
                                 process.stdout.write(`${this.tag} Retrying item ${j.hash}`)
                                 await this.process(this.currentJobIndex)
                             }else{
                                 this.stagedJobRefs.splice(this.currentJobIndex,1)
-                                await JobQueue.remove(j.hash)
+                                await this.jobStore._purge(j.hash)
                                 this.next()
                             }
                             
@@ -81,14 +85,12 @@ class zJobber {
 
                     this.nodeWorker.on("error", async (err) => {
 
-                        let j = this.stagedJobRefs[this.currentJobIndex]
+                        let hash = this.stagedJobRefs[this.currentJobIndex]
 
-                        process.stdout.write(`${this.tag} Worker Failing item ${j.hash}`)
-
-                        if(j != undefined) {
-                            this.stagedJobRefs.splice(this.currentJobIndex,1)
-                            await JobQueue.remove(j.hash)
-                        }
+                        process.stdout.write(`${this.tag} Worker Failing item ${hash}`)
+                        
+                        this.stagedJobRefs.splice(this.currentJobIndex,1)
+                        await this.jobStore._purge(hash)
                         
                         this.next()                  
                         
@@ -96,14 +98,12 @@ class zJobber {
 
                     this.nodeWorker.on("messageerror", async (err) => {
                         //Worker couldn't read message properly
-                        let j = this.stagedJobRefs[this.currentJobIndex]
+                        let hash = this.stagedJobRefs[this.currentJobIndex]
 
-                        process.stdout.write(`${this.tag} Worker Failing item ${j.hash}`)
+                        process.stdout.write(`${this.tag} : messageerror: Worker Failing item ${hash}`)
 
-                        if(j != undefined) {
-                            this.stagedJobRefs.splice(this.currentJobIndex,1)
-                            await JobQueue.remove(j.hash)
-                        }
+                        this.stagedJobRefs.splice(this.currentJobIndex,1)
+                        await this.jobStore._purge(hash)
                         
                         this.next()                  
                         
@@ -111,12 +111,12 @@ class zJobber {
 
                     this.nodeWorker.on('exit', async() => {
                         process.stdout.write(`${this.tag} Worker-Stopped`);
+                        
+                        //Release current job held
+                        let hash = this.stagedJobRefs[this.currentJobIndex]
+                        await this.jobStore._release(hash)   
+                        
                         process.stdout.write(`${this.tag} Restarting queue worker`);
-                        for(let job of this.stagedJobRefs) {
-                            if(job.isLocked) {
-                                await JobQueue.release()
-                            }
-                        }
                         new zJobber(this.queues, this.config)
                     })
 
@@ -133,10 +133,9 @@ class zJobber {
                     this.eventEmitter.on("newTask", async () => {
                         process.stdout.write(`${this.tag} New task arrived`);
                         if(this.stagedJobRefs.length == 0) {
-                            
+                            //if not task is running, load one new ones
                             await this.stageRefs()
                             this.next()
-    
                         }
                     })
     
@@ -169,19 +168,18 @@ class zJobber {
                     }
 
                 }).catch( (err) => {
-                    process.stdout.write(err)
+                    console.error(err)
                 } )
         }
     }
 
-    private stageRefs(): void {
+    private async stageRefs(): Promise<void> {
         try{
             
             //Multi-level Priority
             
             for(let q of this.queues) {
-                let c = await JobQueue.fetchFreeJobs(q)
-                
+                let c = await this.jobStore._fetchFreeHashes(q)
                 this.stagedJobRefs = [ ...this.stagedJobRefs, ...c ]
             }
             this.currentJobIndex = -1;
@@ -191,7 +189,7 @@ class zJobber {
                 process.stdout.write(this.stagedJobRefs.toString())
             }
         }catch(e) {
-            console.log(e);
+            console.error(e);
         }
     }
 
@@ -202,23 +200,23 @@ class zJobber {
                 throw new Error(`${queueName} not found on queue priority list`) 
             }
 
-            let defaultopts = { maxRetry: 3, timeout: 50000}
+            let defaultopts:{maxRetry: number, timeout: number}  = { maxRetry: 3, timeout: 50000}
 
-            options =  { ...defaultopts, ...options}
+            let newOptions =  { ...defaultopts, ...options}
 
             let fn = serialize(payload)
-
-            const job = new JobQueue(queue, fn, args, options.maxRetry, options.timeout)
             
-            const ajob = await job.create()
-            const pos = await JobQueue.countJobs()
+            const job = await global.zJobberCtx.jobStore._stash(queueName, fn, args, newOptions.maxRetry, newOptions.timeout)
+          
+            const pos = await global.zJobberCtx.jobStore._count()
 
             //Inform queue
             zJobberCtx.eventEmitter.emit("newTask")
                 
-            return { hash: ajob.hash, pos: pos }
+            return { hash: job.hash, pos: pos }
         }catch(e) {
-            console.log(e);
+            console.error(e);
+            throw e; // Re-throw the error after logging
         }
     }
      
@@ -226,21 +224,22 @@ class zJobber {
         try{
             this.currentJobIndex = 0 
             if(this.stagedJobRefs.length > 0) {
-                let j = this.stagedJobRefs[0]
-                process.stdout.write(`${this.tag} Moving to item ${j.hash}`);
+                let hash = this.stagedJobRefs[0]
+                process.stdout.write(`${this.tag} Moving to item ${hash}`);
                 await this.process(this.currentJobIndex)
             }else{
                 process.stdout.write(`${this.tag} Queue relaxed, no task to process`);
             }
         }catch(e) {
-            process.stdout.write(e);
+            console.error(e);
         }
     }
 
     private async process(jobStageIndex: number): Promise<void> {
         try{
-            const job = this.stagedJobRefs[jobStageIndex]
-            
+            const hash = this.stagedJobRefs[jobStageIndex]
+            let job: Job|null = await this.jobStore._fetchOne(hash)
+
             if (job !=  null || job != undefined) {
                 if (!job.isLocked) {
                     
@@ -251,7 +250,7 @@ class zJobber {
                     }else{
                         
                         //Auto lock
-                        await JobQueue.updateTrial(job.hash)
+                        await this.jobStore._updateTrial(job.hash)
                         this.nodeWorker.postMessage({hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
 
                     }
