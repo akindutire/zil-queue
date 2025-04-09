@@ -37,6 +37,10 @@ export class JobStoreFactory extends BaseJobStoreFactory {
             return 'REDIS';
         }
 
+        if (connectionString.startsWith('file:')) {
+            return 'RELATIONAL';
+        }
+
         return null;
     }
 }

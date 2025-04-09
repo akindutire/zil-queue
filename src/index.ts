@@ -28,7 +28,7 @@ class zJobber {
                 })
                 .then( async (data) => {
                     // Setup Node Service worker
-                    this.nodeWorker =  new Worker(join("./worker/QueueWorker.js"));
+                    this.nodeWorker =  new Worker(join("./worker/jobWorker.js"));
                     this.tag = this.config.workerTag??this.internalConfig.tag
                     process.stdout.write(`------ ${this.tag} Worker started ------`);
                     return Promise.resolve(true)
@@ -251,7 +251,7 @@ class zJobber {
                         
                         //Auto lock
                         await this.jobStore._updateTrial(job.hash)
-                        this.nodeWorker.postMessage({hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
+                        this.nodeWorker.postMessage({tag: this.tag, hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
 
                     }
                     
