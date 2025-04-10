@@ -9,19 +9,22 @@ export class RedisJobStore implements JobStore {
     private client: any;
     
     constructor(options: { uri?: string } = {}) {
-        this.client = createClient({
-            url: options.uri || process.env.REDIS_URL || 'redis://localhost:6379'
-        });
-        
-        this.client.on('error', (err: any) => console.error('Redis Client Error', err));
-        
-        // Connect automatically
-        this.connect();
+        try{
+            this.client = createClient({
+                url: options.uri || process.env.REDIS_URL || 'redis://localhost:6379'
+            });
+            
+            // //Connect to DB
+            this.connect();
+        } catch (e) {
+            throw e
+        }
     }
     
     private async connect() {
         if (!this.client.isOpen) {
             await this.client.connect();
+            process.stdout.write("Redis: Job store connection successful")
         }
     }
     
@@ -366,7 +369,7 @@ export class RedisJobStore implements JobStore {
         }
     }
     
-    async disconnect() {
+    async _disconnect(): Promise<void> {
         if (this.client && this.client.isOpen) {
             await this.client.quit();
         }

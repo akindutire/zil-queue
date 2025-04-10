@@ -5,9 +5,12 @@ import { Queue } from "../../../structs/queueStruct";
 
 export class RelationalJobStore implements JobStore {
 
-    constructor(connection: DataSource) {
-        
+    constructor(connectionDataSource: DataSource) {
+        //Connect to DB
+        connectionDataSource.initialize()
+        process.stdout.write(`${connectionDataSource.options.type} Job store connection successful`)
     }
+
     _stash: (queueName: string, payload: string, args: any[], maxRetry: number, timeout: number) => Promise<Job>;
     _lock: (hash: string) => Promise<boolean>;
     _release: (hash: string) => Promise<Job>;
@@ -19,4 +22,8 @@ export class RelationalJobStore implements JobStore {
     _fetchOne: (hash: string) => Promise<Job | null>;
     _fetchLocked: (queue: Queue) => Promise<Job[]>;
     _updateTrial: (hash: string) => Promise<boolean>;
+
+    async _disconnect(): Promise<void> {
+        
+    }
 }

@@ -13,4 +13,5 @@ export interface JobStore {
     _fetchOne: (hash: string) => Promise<Job|null>
     _fetchLocked: (queue: Queue) => Promise<Job[]>,
     _updateTrial: (hash: string) => Promise<boolean>
+    _disconnect: () => Promise<void> 
 }

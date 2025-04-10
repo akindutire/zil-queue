@@ -10,15 +10,15 @@ const { connect } = pkg;
 export class MongoJobStore implements JobStore {
     
     constructor(options: { uri: string } ){ 
-      this.connect(options.uri)  
+        //Connect to DB
+        this.connect(options.uri)  
     }
 
     private async connect(uri: string) {
         try{
             const connection = await  connect(uri, {  serverSelectionTimeoutMS: 10000 });
-            console.log("Connected to MongoDb");
+            process.stdout.write("Mongo: Job store connection successful")
             return connection
-        return connection
         } catch (e) {
             throw e
         }
@@ -245,6 +245,9 @@ export class MongoJobStore implements JobStore {
        
     }
 
+    async _disconnect(): Promise<void> {
+        
+    }
    
 }
 
@@ -305,7 +308,7 @@ const schema = new Schema({
 
 });
 
-const m = model('zJobber', schema);
+const m = model('z_jobber', schema);
 
 
 
