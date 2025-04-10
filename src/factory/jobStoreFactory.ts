@@ -27,6 +27,10 @@ export class JobStoreFactory extends BaseJobStoreFactory {
                     throw Error(`Unknown database connection '${jobStoreConnection}', can not deduce data store in use, only MONGO, REDIS connection string is supported, consider DataSourceOptions for Postgres, Mysql, Sqlite and CockroachDB`)
                 }
             } else {
+                let supportedType: string[] = ['cockroachdb', 'postgres', 'mysql', 'mariadb', 'mysql', "sqlite"]
+                if (!supportedType.includes(jobStoreConnection.type)) {
+                    throw Error(`Unsupported database driver ${jobStoreConnection.type} provided, only ${supportedType.join(',')}`);
+                }
                 const jobberDataSource = (new JobberDataSource(jobStoreConnection)).getDataSource();
                 this.jobStoreInstance = new RelationalJobStore(jobberDataSource)
             }
