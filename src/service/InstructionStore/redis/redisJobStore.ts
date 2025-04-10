@@ -8,9 +8,9 @@ import { Queue } from '../../../structs/queueStruct';
 export class RedisJobStore implements JobStore {
     private client: any;
     
-    constructor(options: { url?: string } = {}) {
+    constructor(options: { uri?: string } = {}) {
         this.client = createClient({
-            url: options.url || process.env.REDIS_URL || 'redis://localhost:6379'
+            url: options.uri || process.env.REDIS_URL || 'redis://localhost:6379'
         });
         
         this.client.on('error', (err: any) => console.error('Redis Client Error', err));

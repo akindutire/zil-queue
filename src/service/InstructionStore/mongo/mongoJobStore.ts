@@ -5,11 +5,25 @@ import { v4 as uuidv4 } from 'uuid';
 import { JobStore } from '../../../structs/jobStoreStruct';
 import { Job } from '../../../structs/jobStruct';
 import { Queue } from '../../../structs/queueStruct';
+const { connect } = pkg;
 
 export class MongoJobStore implements JobStore {
     
-    constructor(){ }
+    constructor(options: { uri: string } ){ 
+      this.connect(options.uri)  
+    }
 
+    private async connect(uri: string) {
+        try{
+            const connection = await  connect(uri, {  serverSelectionTimeoutMS: 10000 });
+            console.log("Connected to MongoDb");
+            return connection
+        return connection
+        } catch (e) {
+            throw e
+        }
+        
+    }
 
     private calculateTaskHash(queueName: string, payload: any){
         try{

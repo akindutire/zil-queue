@@ -1,6 +1,8 @@
+import { DataSourceOptions } from "typeorm";
+
 export interface Config {
     showQueueList: boolean, 
     refreshPeriod: number,
-    connectionString: string,
+    connection: string | DataSourceOptions,
     workerTag?: string
 }

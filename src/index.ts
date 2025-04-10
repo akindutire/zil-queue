@@ -23,7 +23,25 @@ class zJobber {
         if(isMainThread) {
             new Promise( (resolve, reject) => {
                     this.queueFlatMap =this.queues.flatMap( (q) => { return q.name; } );
-                    this.jobStore = (new JobStoreFactory()).make(config.connectionString)
+                    if(typeof config.connection == 'string' && config.connection.startsWith('redis://')) {
+
+                    }
+                    this.jobStore = (new JobStoreFactory()).make(config.connection)
+
+                    //Listen to uncaught exception at beginning of the app
+                    process.on('uncaughtException', (e) => {
+                        console.error(e);
+                    });
+
+                    process.on('unhandledRejection', (e) => {
+                        console.error(e);
+                    });
+
+                    process.on('unhandledPromiseRejectionWarning', (e) => {
+                        console.error(e);
+                    });
+
+
                     resolve('start')
                 })
                 .then( async (data) => {
