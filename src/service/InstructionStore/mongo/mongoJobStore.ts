@@ -72,7 +72,7 @@ export class MongoJobStore implements JobStore {
     async _count() : Promise<number> {
         try{
        
-            const count = await m.countDocuments({isFailed: false});
+            const count = await m.countDocuments();
             return count;   
         
         }catch(e){
@@ -308,7 +308,7 @@ const schema = new Schema({
 
 });
 
-const m = model('z_jobber', schema);
+const m = model('z_jobber_instruction_store', schema);
 
 
 

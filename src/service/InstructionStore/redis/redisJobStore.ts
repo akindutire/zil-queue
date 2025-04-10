@@ -11,7 +11,8 @@ export class RedisJobStore implements JobStore {
     constructor(options: { uri?: string } = {}) {
         try{
             this.client = createClient({
-                url: options.uri || process.env.REDIS_URL || 'redis://localhost:6379'
+                url: options.uri || process.env.REDIS_URL || 'redis://localhost:6379',
+                database: 1
             });
             
             // //Connect to DB
@@ -38,11 +39,11 @@ export class RedisJobStore implements JobStore {
     }
     
     private getJobKey(hash: string): string {
-        return `job:${hash}`;
+        return `0x1_z_job_instn:${hash}`;
     }
     
     private getQueueKey(queueName: string): string {
-        return `queue:${queueName}`;
+        return `0x1_z_job_queue:${queueName}`;
     }
     
     private async jobExists(hash: string): Promise<boolean> {
@@ -109,13 +110,13 @@ export class RedisJobStore implements JobStore {
             const keys = await this.client.keys('job:*');
             if (!keys) return 0;
             
-            let count = 0;
-            for (const key of keys) {
-                const isFailed = await this.client.hGet(key, 'isFailed');
-                if (isFailed === 'false') {
-                    count++;
-                }
-            }
+            let count = keys.length;
+            // for (const key of keys) {
+            //     const isFailed = await this.client.hGet(key, 'isFailed');
+            //     if (isFailed === 'false') {
+            //         count++;
+            //     }
+            // }
             
             return count;
         } catch (err) {
