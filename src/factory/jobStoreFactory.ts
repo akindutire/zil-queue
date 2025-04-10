@@ -3,7 +3,7 @@ import { MongoJobStore } from "../service/InstructionStore/mongo/mongoJobStore";
 import { RedisJobStore } from "../service/InstructionStore/redis/redisJobStore";
 import { JobStore } from "../structs/jobStoreStruct";
 import BaseJobStoreFactory, { InstructionStoreVariant } from "./baseJobStoreFactory";
-import { JobberDataSource } from "../service/datasource/dataSource";
+import { JobberDataSource } from "../service/InstructionStore/relational/datasource/dataSource";
 import { RelationalJobStore } from "../service/InstructionStore/relational/relationalJobStore";
 
 export class JobStoreFactory extends BaseJobStoreFactory {
@@ -29,13 +29,13 @@ export class JobStoreFactory extends BaseJobStoreFactory {
             } else {
                 const jobberDataSource = (new JobberDataSource(jobStoreConnection)).getDataSource();
                 this.jobStoreInstance = new RelationalJobStore(jobberDataSource)
-                
             }
+
+            return this.jobStoreInstance
+
         } else {
             return this.jobStoreInstance
         }
-
-        return this.jobStoreInstance
     }
 
     private detectDatabaseTypeFromConnectionString(connectionString: string) : InstructionStoreVariant|string {

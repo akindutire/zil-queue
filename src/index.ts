@@ -22,10 +22,9 @@ class zJobber {
     constructor(private queues: Queue[], private config: Config) {
         if(isMainThread) {
             new Promise( (resolve, reject) => {
-                    this.queueFlatMap =this.queues.flatMap( (q) => { return q.name; } );
-                    if(typeof config.connection == 'string' && config.connection.startsWith('redis://')) {
-
-                    }
+                
+                    this.queueFlatMap = this.queues.flatMap( (q) => { return q.name; } );
+                    
                     this.jobStore = (new JobStoreFactory()).make(config.connection)
 
                     //Listen to uncaught exception at beginning of the app
