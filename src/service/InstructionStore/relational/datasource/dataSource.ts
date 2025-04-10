@@ -3,7 +3,7 @@ export class JobberDataSource {
     private source : DataSource
     constructor(connectionOptions: DataSourceOptions) {
         
-        this.source = new DataSource({...connectionOptions, entities: []});
+        this.source = new DataSource({...connectionOptions, synchronize: true, logging: false, entities: []});
     }
 
     getDataSource() : DataSource {
