@@ -22,9 +22,22 @@ class zJobber {
     constructor(private queues: Queue[], private config: Config) {
         if(isMainThread) {
             new Promise( (resolve, reject) => {
-                
-                    this.queueFlatMap = this.queues.flatMap( (q) => { return q.name; } );
+
+                    let l_flat_queue = new Set(this.queues.flatMap( (q) => { return q.name; } ))
+
+                    let l_queue = []
+                    for (const ulq of this.queues) {
+                        if(l_flat_queue.has(ulq.name)) {
+                            if(ulq.algo != "SJF")
+                                ulq.algo = "FIFO"
+                            
+                            l_queue.push(ulq)
+                        }
+                    }
+
+                    this.queues = l_queue
                     
+
                     this.jobStore = (new JobStoreFactory()).make(config.connection)
 
                     //Listen to uncaught exception at beginning of the app
@@ -210,7 +223,7 @@ class zJobber {
         }
     }
 
-    private static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number}> ) : Promise<{ hash: string, pos: number }> {
+    public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number}> ) : Promise<{ hash: string, pos: number }> {
         try{
             //Pick jobber from global context
             if(!zJobberCtx.queueFlatMap.includes(queueName)) {
@@ -232,6 +245,15 @@ class zJobber {
                 
             return { hash: job.hash, pos: pos }
         }catch(e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async purge(hash: string): Promise<boolean> {
+        try {
+            return await global.zJobberCtx.jobStore._purge(hash)
+        } catch (e) {
             console.error(e);
             throw e; // Re-throw the error after logging
         }
