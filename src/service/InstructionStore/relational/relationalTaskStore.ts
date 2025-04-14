@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { JobStore } from "../../../structs/taskStoreStruct";
-import { Job } from "../../../structs/jobStruct";
+import { Task } from "../../../structs/taskStruct";
 import { Queue } from "../../../structs/queueStruct";
 import { ZJobberRelInstructionStore } from "./datasource/jobSchema";
 import md5 from "md5";
@@ -30,7 +30,7 @@ export class RelationalJobStore implements JobStore {
             }
         }
 
-    async _stash (queueName: string, payload: string, args: any[], maxRetry: number, timeout: number) : Promise<Job> {
+    async _stash (queueName: string, payload: string, args: any[], maxRetry: number, timeout: number) : Promise<Task> {
         const job = new ZJobberRelInstructionStore()
 
         job.hash = this.calculateTaskHash(queueName, payload);
@@ -44,7 +44,7 @@ export class RelationalJobStore implements JobStore {
        
         await this.jobInstructionStoreRepo.save(job)
 
-        return job as Job
+        return job as Task
     }
 
     async _lock (hash: string): Promise<boolean> {
@@ -66,7 +66,7 @@ export class RelationalJobStore implements JobStore {
         }
     }
 
-    async _release (hash: string) : Promise<Job> {
+    async _release (hash: string) : Promise<Task> {
         try{
 
             const job: ZJobberRelInstructionStore|null = await this.jobInstructionStoreRepo.findOne({ where: {hash: hash}})
@@ -76,11 +76,11 @@ export class RelationalJobStore implements JobStore {
             if ( job != null && !job.isLocked ){
                 job.isLocked = false;
                 job.modifiedAt = new Date().toISOString()
-                return await this.jobInstructionStoreRepo.save(job) as Job;
+                return await this.jobInstructionStoreRepo.save(job) as Task;
             }
         
         
-            return job as Job;
+            return job as Task;
             
         }catch(e){
             throw e;
@@ -126,7 +126,7 @@ export class RelationalJobStore implements JobStore {
         }
     }
 
-    async _fetchFree (q: Queue) : Promise<Job[]> {
+    async _fetchFree (q: Queue) : Promise<Task[]> {
         try{
        
             let result
@@ -154,7 +154,7 @@ export class RelationalJobStore implements JobStore {
             if(result === null){
                 return [];                
             }
-            return result.map( r => r as Job )   
+            return result.map( r => r as Task )
         }catch(e){
             throw e;
         }
@@ -196,15 +196,15 @@ export class RelationalJobStore implements JobStore {
         }
     }
 
-    async _fetchOne (hash: string) : Promise<Job | null> {
+    async _fetchOne (hash: string) : Promise<Task | null> {
         try{
-            return await this.jobInstructionStoreRepo.findOne({ where: {hash: hash}}) as Job
+            return await this.jobInstructionStoreRepo.findOne({ where: {hash: hash}}) as Task
         } catch (e) {
             throw e;
         }
     }
 
-    async _fetchLocked (q: Queue) : Promise<Job[]> {
+    async _fetchLocked (q: Queue) : Promise<Task[]> {
         try{
        
             let result
@@ -232,7 +232,7 @@ export class RelationalJobStore implements JobStore {
             if(result === null){
                 return [];                
             }
-            return result.map( r => r as Job )   
+            return result.map( r => r as Task )
         }catch(e){
             throw e;
         }

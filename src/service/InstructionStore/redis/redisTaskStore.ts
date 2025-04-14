@@ -1,11 +1,11 @@
 import { createClient } from 'redis';
 import md5 from 'md5';
 import { v4 as uuidv4 } from 'uuid';
-import { JobStore } from '../../../structs/taskStoreStruct';
-import { Job } from '../../../structs/jobStruct';
+import { TaskStore } from '../../../structs/taskStoreStruct';
+import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 
-export class RedisJobStore implements JobStore {
+export class RedisJobStore implements TaskStore {
     private client: any;
     
     constructor(options: { uri?: string } = {}) {
@@ -50,14 +50,14 @@ export class RedisJobStore implements JobStore {
         return await this.client.exists(this.getJobKey(hash)) === 1;
     }
     
-    async _stash(queueName: string, payload: string, args: any[], maxRetry: number, timeout: number): Promise<Job> {
+    async _stash(queueName: string, payload: string, args: any[], maxRetry: number, timeout: number): Promise<Task> {
         try {
             const hash = this.calculateTaskHash(queueName, payload);
             const jobKey = this.getJobKey(hash);
             const queueKey = this.getQueueKey(queueName);
             const now = new Date().toISOString();
             
-            const job: Job = {
+            const job: Task = {
                 queue: queueName,
                 hash: hash,
                 payload: payload,
@@ -124,7 +124,7 @@ export class RedisJobStore implements JobStore {
         }
     }
     
-    async _fetchFree(q: Queue): Promise<Job[]> {
+    async _fetchFree(q: Queue): Promise<Task[]> {
         try {
             const queueKey = this.getQueueKey(q.name.trim());
             
@@ -135,7 +135,7 @@ export class RedisJobStore implements JobStore {
                 return [];
             }
             
-            const jobs: Job[] = [];
+            const jobs: Task[] = [];
             
             for (const hash of jobHashes) {
                 const jobKey = this.getJobKey(hash);
@@ -181,7 +181,7 @@ export class RedisJobStore implements JobStore {
         }
     }
     
-    async _fetchOne(hash: string): Promise<Job | null> {
+    async _fetchOne(hash: string): Promise<Task | null> {
         try {
             const jobKey = this.getJobKey(hash);
             const exists = await this.jobExists(hash);
@@ -211,12 +211,12 @@ export class RedisJobStore implements JobStore {
         }
     }
     
-    async _fetchLocked(): Promise<Job[]> {
+    async _fetchLocked(): Promise<Task[]> {
         try {
             const keys = await this.client.keys('job:*');
             if (!keys) return [];
             
-            const jobs: Job[] = [];
+            const jobs: Task[] = [];
             
             for (const key of keys) {
                 const jobData = await this.client.hGetAll(key);
@@ -309,7 +309,7 @@ export class RedisJobStore implements JobStore {
         }
     }
     
-    async _release(hash: string): Promise<Job> {
+    async _release(hash: string): Promise<Task> {
         try {
             const jobKey = this.getJobKey(hash);
             const jobData = await this.client.hGetAll(jobKey);
