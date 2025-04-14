@@ -1,7 +1,7 @@
 import { Job } from "./jobStruct"
 import { Queue } from "./queueStruct"
 
-export interface JobStore {
+export interface TaskStore {
     _stash: (queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) => Promise<Job>,
     _lock: (hash: string) => Promise<boolean>,
     _release: (hash: string) => Promise<Job>,

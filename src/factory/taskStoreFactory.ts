@@ -1,16 +1,16 @@
 import { DataSourceOptions } from "typeorm";
 import { MongoJobStore } from "../service/InstructionStore/mongo/mongoJobStore";
 import { RedisJobStore } from "../service/InstructionStore/redis/redisJobStore";
-import { JobStore } from "../structs/jobStoreStruct";
-import BaseJobStoreFactory, { InstructionStoreVariant } from "./baseJobStoreFactory";
+import { TaskStore } from "../structs/taskStoreStruct";
+import BaseTaskStoreFactory, { InstructionStoreVariant } from "./baseTaskStoreFactory";
 import { JobberDataSource } from "../service/InstructionStore/relational/datasource/dataSource";
 import { RelationalJobStore } from "../service/InstructionStore/relational/relationalJobStore";
 
-export class JobStoreFactory extends BaseJobStoreFactory {
+export class TaskStoreFactory extends BaseTaskStoreFactory {
 
-    private jobStoreInstance: JobStore
-    public override make(jobStoreConnection: string | DataSourceOptions): JobStore {
-        if (!this.jobStoreInstance) {
+    private taskStoreInstance: TaskStore
+    public override make(jobStoreConnection: string | DataSourceOptions): TaskStore {
+        if (!this.taskStoreInstance) {
             let databaseType: InstructionStoreVariant|string
             if (typeof jobStoreConnection == 'string') {
                 databaseType = this.detectDatabaseTypeFromConnectionString(jobStoreConnection)
@@ -20,9 +20,9 @@ export class JobStoreFactory extends BaseJobStoreFactory {
             
             if(typeof jobStoreConnection == 'string') {
                 if (databaseType === 'MONGO') {
-                    this.jobStoreInstance = new MongoJobStore({ uri: jobStoreConnection } )
+                    this.taskStoreInstance = new MongoJobStore({ uri: jobStoreConnection } )
                 } else if(databaseType === "REDIS") {
-                    this.jobStoreInstance = new RedisJobStore({ uri: jobStoreConnection } )
+                    this.taskStoreInstance = new RedisJobStore({ uri: jobStoreConnection } )
                 } else{
                     throw Error(`Unknown database connection '${jobStoreConnection}', can not deduce data store in use, only MONGO, REDIS connection string is supported, consider DataSourceOptions for Postgres, Mysql, Sqlite and CockroachDB`)
                 }
@@ -32,13 +32,13 @@ export class JobStoreFactory extends BaseJobStoreFactory {
                     throw Error(`Unsupported database driver ${jobStoreConnection.type} provided, only ${supportedType.join(',')}`);
                 }
                 const jobberDataSource = (new JobberDataSource(jobStoreConnection)).getDataSource();
-                this.jobStoreInstance = new RelationalJobStore(jobberDataSource)
+                this.taskStoreInstance = new RelationalJobStore(jobberDataSource)
             }
 
-            return this.jobStoreInstance
+            return this.taskStoreInstance
 
         } else {
-            return this.jobStoreInstance
+            return this.taskStoreInstance
         }
     }
 

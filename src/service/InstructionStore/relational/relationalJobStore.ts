@@ -1,5 +1,5 @@
 import { DataSource, Repository } from "typeorm";
-import { JobStore } from "../../../structs/jobStoreStruct";
+import { JobStore } from "../../../structs/taskStoreStruct";
 import { Job } from "../../../structs/jobStruct";
 import { Queue } from "../../../structs/queueStruct";
 import { ZJobberRelInstructionStore } from "./datasource/jobSchema";

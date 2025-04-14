@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import md5 from 'md5';
 import { v4 as uuidv4 } from 'uuid';
-import { JobStore } from '../../../structs/jobStoreStruct';
+import { JobStore } from '../../../structs/taskStoreStruct';
 import { Job } from '../../../structs/jobStruct';
 import { Queue } from '../../../structs/queueStruct';
 

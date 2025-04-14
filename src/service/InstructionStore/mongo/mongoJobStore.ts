@@ -2,7 +2,7 @@ import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
-import { JobStore } from '../../../structs/jobStoreStruct';
+import { JobStore } from '../../../structs/taskStoreStruct';
 import { Job } from '../../../structs/jobStruct';
 import { Queue } from '../../../structs/queueStruct';
 const { connect } = pkg;

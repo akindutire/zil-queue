@@ -5,8 +5,8 @@ import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
 import { Config } from './structs/configStruct';
 import { Queue } from './structs/queueStruct';
-import { JobStore } from './structs/jobStoreStruct';
-import { JobStoreFactory } from './factory/jobStoreFactory';
+import { JobStore } from './structs/taskStoreStruct';
+import { JobStoreFactory } from './factory/taskStoreFactory';
 import { Job } from './structs/jobStruct';
 
 class zJobber {
