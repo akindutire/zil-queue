@@ -42,7 +42,7 @@ new Jobber(
 const task1 = await Jobber.dispatch(
   "podcast-email",
   async (a, b, c, basePath) => {
-    const pkg = await import(basePath + "/example/exampleJob.js");
+    const pkg = await import(basePath + "/exampleJob.js");
     await pkg.run(a, b, c);
   },
   [1, 2, 3, process.cwd()],
