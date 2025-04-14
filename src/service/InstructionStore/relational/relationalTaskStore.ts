@@ -2,7 +2,7 @@ import { DataSource, Repository } from "typeorm";
 import { TaskStore } from "../../../structs/taskStoreStruct";
 import { Task } from "../../../structs/taskStruct";
 import { Queue } from "../../../structs/queueStruct";
-import { ZJobberRelInstructionStore } from "./datasource/jobSchema";
+import { ZJobberRelInstructionStore } from "./datasource/taskSchema";
 import md5 from "md5";
 import { v4 as uuidv4 } from 'uuid';
 

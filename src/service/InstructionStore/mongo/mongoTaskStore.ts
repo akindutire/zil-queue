@@ -2,12 +2,12 @@ import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
-import { TakStore } from '../../../structs/taskStoreStruct';
+import { TaskStore } from '../../../structs/taskStoreStruct';
 import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 const { connect } = pkg;
 
-export class MongoTaskStore implements TakStore {
+export class MongoTaskStore implements TaskStore {
     
     constructor(options: { uri: string } ){ 
         //Connect to DB
@@ -308,7 +308,7 @@ const schema = new Schema({
 
 });
 
-const m = model('z_jobber_instruction_store', schema);
+const m = model('z_jobber_task_instruction_store', schema);
 
 
 

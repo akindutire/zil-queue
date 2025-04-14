@@ -1,9 +1,9 @@
 import { DataSource, DataSourceOptions } from "typeorm"
-import { ZJobberRelInstructionStore } from "./jobSchema";
+import { ZTaskRelInstructionStore } from "./taskSchema";
 export class JobberDataSource {
     private source : DataSource
     constructor(connectionOptions: DataSourceOptions) {
-        this.source = new DataSource({...connectionOptions, synchronize: true, logging: false, entities: [ZJobberRelInstructionStore]});
+        this.source = new DataSource({...connectionOptions, synchronize: true, logging: false, entities: [ZTaskRelInstructionStore]});
     }
 
     getDataSource() : DataSource {

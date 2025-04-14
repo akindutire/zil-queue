@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Table, UpdateDateColumn } from "typeorm";
 
 @Entity()
-export class ZJobberRelInstructionStore {
+export class ZTaskRelInstructionStore {
 
     @PrimaryGeneratedColumn()
     id: number

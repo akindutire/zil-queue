@@ -38,26 +38,26 @@ export class RedisTaskStore implements TaskStore {
         }
     }
     
-    private getJobKey(hash: string): string {
-        return `0x1_z_job_instn:${hash}`;
+    private getTaskKey(hash: string): string {
+        return `0x1_z_task_instn:${hash}`;
     }
     
     private getQueueKey(queueName: string): string {
-        return `0x1_z_job_queue:${queueName}`;
+        return `0x1_z_task_queue:${queueName}`;
     }
     
-    private async jobExists(hash: string): Promise<boolean> {
-        return await this.client.exists(this.getJobKey(hash)) === 1;
+    private async taskExists(hash: string): Promise<boolean> {
+        return await this.client.exists(this.getTaskKey(hash)) === 1;
     }
     
     async _stash(queueName: string, payload: string, args: any[], maxRetry: number, timeout: number): Promise<Task> {
         try {
             const hash = this.calculateTaskHash(queueName, payload);
-            const jobKey = this.getJobKey(hash);
+            const taskKey = this.getTaskKey(hash);
             const queueKey = this.getQueueKey(queueName);
             const now = new Date().toISOString();
             
-            const job: Task = {
+            const task: Task = {
                 queue: queueName,
                 hash: hash,
                 payload: payload,
@@ -74,7 +74,7 @@ export class RedisTaskStore implements TaskStore {
             const multi = this.client.multi();
             
             // Store job details
-            multi.hSet(jobKey, {
+            multi.hSet(taskKey, {
                 queue: queueName,
                 hash: hash,
                 payload: JSON.stringify(payload),
@@ -99,7 +99,7 @@ export class RedisTaskStore implements TaskStore {
             
             await multi.exec();
             
-            return job;
+            return task;
         } catch (err) {
             throw err;
         }
@@ -107,7 +107,7 @@ export class RedisTaskStore implements TaskStore {
     
     async _count(): Promise<number> {
         try {
-            const keys = await this.client.keys('job:*');
+            const keys = await this.client.keys('task:*');
             if (!keys) return 0;
             
             let count = keys.length;
@@ -129,44 +129,44 @@ export class RedisTaskStore implements TaskStore {
             const queueKey = this.getQueueKey(q.name.trim());
             
             // Get all job hashes from this queue, sorted appropriately
-            const jobHashes = await this.client.zRange(queueKey, 0, -1);
+            const taskHashes = await this.client.zRange(queueKey, 0, -1);
             
-            if (!jobHashes || jobHashes.length === 0) {
+            if (!taskHashes || taskHashes.length === 0) {
                 return [];
             }
             
-            const jobs: Task[] = [];
+            const tasks: Task[] = [];
             
-            for (const hash of jobHashes) {
-                const jobKey = this.getJobKey(hash);
-                const jobData = await this.client.hGetAll(jobKey);
+            for (const hash of taskHashes) {
+                const taskKey = this.getTaskKey(hash);
+                const taskData = await this.client.hGetAll(taskKey);
                 
-                if (jobData && jobData.isFailed === 'false' && jobData.isLocked === 'false') {
-                    jobs.push({
-                        ...jobData,
-                        payload: JSON.parse(jobData.payload),
-                        args: JSON.parse(jobData.args),
-                        trial: parseInt(jobData.trial),
-                        isFailed: jobData.isFailed === 'true',
-                        isLocked: jobData.isLocked === 'true',
-                        timeout: parseInt(jobData.timeout),
-                        maxRetry: parseInt(jobData.maxRetry)
+                if (taskData && taskData.isFailed === 'false' && taskData.isLocked === 'false') {
+                    tasks.push({
+                        ...taskData,
+                        payload: JSON.parse(taskData.payload),
+                        args: JSON.parse(taskData.args),
+                        trial: parseInt(taskData.trial),
+                        isFailed: taskData.isFailed === 'true',
+                        isLocked: taskData.isLocked === 'true',
+                        timeout: parseInt(taskData.timeout),
+                        maxRetry: parseInt(taskData.maxRetry)
                     });
                 }
             }
             
             // Sort based on algorithm
             if (q.algo === 'SJF') {
-                jobs.sort((a, b) => a.timeout - b.timeout);
+                tasks.sort((a, b) => a.timeout - b.timeout);
             } else if (q.algo === 'FIFO') {
-                jobs.sort((a, b) => {
+                tasks.sort((a, b) => {
                     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
                 });
             } else {
                 throw Error(`Queue scheduling algorithm ${q?.algo} not supported`);
             }
             
-            return jobs;
+            return tasks;
         } catch (err) {
             throw err;
         }
@@ -174,8 +174,8 @@ export class RedisTaskStore implements TaskStore {
     
     async _fetchFreeHashes(q: Queue): Promise<string[]> {
         try {
-            const jobs = await this._fetchFree(q);
-            return jobs.map(job => job.hash);
+            const tasks = await this._fetchFree(q);
+            return tasks.map(job => job.hash);
         } catch (err) {
             throw err;
         }
@@ -183,28 +183,28 @@ export class RedisTaskStore implements TaskStore {
     
     async _fetchOne(hash: string): Promise<Task | null> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const exists = await this.jobExists(hash);
+            const taskKey = this.getTaskKey(hash);
+            const exists = await this.taskExists(hash);
             
             if (!exists) {
                 return null;
             }
             
-            const jobData = await this.client.hGetAll(jobKey);
+            const taskData = await this.client.hGetAll(taskKey);
             
-            if (!jobData || jobData.isFailed === 'true') {
+            if (!taskData || taskData.isFailed === 'true') {
                 return null;
             }
             
             return {
-                ...jobData,
-                payload: JSON.parse(jobData.payload),
-                args: JSON.parse(jobData.args),
-                trial: parseInt(jobData.trial),
-                isFailed: jobData.isFailed === 'true',
-                isLocked: jobData.isLocked === 'true',
-                timeout: parseInt(jobData.timeout),
-                maxRetry: parseInt(jobData.maxRetry)
+                ...taskData,
+                payload: JSON.parse(taskData.payload),
+                args: JSON.parse(taskData.args),
+                trial: parseInt(taskData.trial),
+                isFailed: taskData.isFailed === 'true',
+                isLocked: taskData.isLocked === 'true',
+                timeout: parseInt(taskData.timeout),
+                maxRetry: parseInt(taskData.maxRetry)
             };
         } catch (err) {
             throw err;
@@ -213,29 +213,29 @@ export class RedisTaskStore implements TaskStore {
     
     async _fetchLocked(): Promise<Task[]> {
         try {
-            const keys = await this.client.keys('job:*');
+            const keys = await this.client.keys('task:*');
             if (!keys) return [];
             
-            const jobs: Task[] = [];
+            const tasks: Task[] = [];
             
             for (const key of keys) {
-                const jobData = await this.client.hGetAll(key);
+                const taskData = await this.client.hGetAll(key);
                 
-                if (jobData && jobData.isLocked === 'true') {
-                    jobs.push({
-                        ...jobData,
-                        payload: JSON.parse(jobData.payload),
-                        args: JSON.parse(jobData.args),
-                        trial: parseInt(jobData.trial),
-                        isFailed: jobData.isFailed === 'true',
-                        isLocked: jobData.isLocked === 'true',
-                        timeout: parseInt(jobData.timeout),
-                        maxRetry: parseInt(jobData.maxRetry)
+                if (taskData && taskData.isLocked === 'true') {
+                    tasks.push({
+                        ...taskData,
+                        payload: JSON.parse(taskData.payload),
+                        args: JSON.parse(taskData.args),
+                        trial: parseInt(taskData.trial),
+                        isFailed: taskData.isFailed === 'true',
+                        isLocked: taskData.isLocked === 'true',
+                        timeout: parseInt(taskData.timeout),
+                        maxRetry: parseInt(taskData.maxRetry)
                     });
                 }
             }
             
-            return jobs;
+            return tasks;
         } catch (err) {
             throw err;
         }
@@ -243,14 +243,14 @@ export class RedisTaskStore implements TaskStore {
     
     async _fail(hash: string): Promise<boolean> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const exists = await this.jobExists(hash);
+            const taskKey = this.getTaskKey(hash);
+            const exists = await this.taskExists(hash);
             
             if (!exists) {
                 return false;
             }
             
-            await this.client.hSet(jobKey, {
+            await this.client.hSet(taskKey, {
                 isFailed: 'true',
                 isLocked: 'false',
                 modifiedAt: new Date().toISOString()
@@ -264,17 +264,17 @@ export class RedisTaskStore implements TaskStore {
     
     async _updateTrial(hash: string): Promise<boolean> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const jobData = await this.client.hGetAll(jobKey);
+            const taskKey = this.getTaskKey(hash);
+            const taskData = await this.client.hGetAll(taskKey);
             
-            if (!jobData) {
+            if (!taskData) {
                 return false;
             }
             
-            if (jobData.isLocked === 'false') {
-                const newTrial = parseInt(jobData.trial) + 1;
+            if (taskData.isLocked === 'false') {
+                const newTrial = parseInt(taskData.trial) + 1;
                 
-                await this.client.hSet(jobKey, {
+                await this.client.hSet(taskKey, {
                     trial: newTrial,
                     isLocked: 'true',
                     modifiedAt: new Date().toISOString()
@@ -291,14 +291,14 @@ export class RedisTaskStore implements TaskStore {
     
     async _lock(hash: string): Promise<boolean> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const jobData = await this.client.hGetAll(jobKey);
+            const taskKey = this.getTaskKey(hash);
+            const taskData = await this.client.hGetAll(taskKey);
             
-            if (!jobData || jobData.isLocked === 'true') {
+            if (!taskData || taskData.isLocked === 'true') {
                 return false;
             }
             
-            await this.client.hSet(jobKey, {
+            await this.client.hSet(taskKey, {
                 isLocked: 'true',
                 modifiedAt: new Date().toISOString()
             });
@@ -311,30 +311,30 @@ export class RedisTaskStore implements TaskStore {
     
     async _release(hash: string): Promise<Task> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const jobData = await this.client.hGetAll(jobKey);
+            const taskKey = this.getTaskKey(hash);
+            const taskData = await this.client.hGetAll(taskKey);
             
-            if (!jobData) {
+            if (!taskData) {
                 throw new Error(`Job with hash ${hash} not found`);
             }
             
-            await this.client.hSet(jobKey, {
+            await this.client.hSet(taskKey, {
                 isLocked: 'false',
                 modifiedAt: new Date().toISOString()
             });
             
             // Get updated job data
-            const updatedJobData = await this.client.hGetAll(jobKey);
+            const updatedtaskData = await this.client.hGetAll(taskKey);
             
             return {
-                ...updatedJobData,
-                payload: JSON.parse(updatedJobData.payload),
-                args: JSON.parse(updatedJobData.args),
-                trial: parseInt(updatedJobData.trial),
-                isFailed: updatedJobData.isFailed === 'true',
-                isLocked: updatedJobData.isLocked === 'true',
-                timeout: parseInt(updatedJobData.timeout),
-                maxRetry: parseInt(updatedJobData.maxRetry)
+                ...updatedtaskData,
+                payload: JSON.parse(updatedtaskData.payload),
+                args: JSON.parse(updatedtaskData.args),
+                trial: parseInt(updatedtaskData.trial),
+                isFailed: updatedtaskData.isFailed === 'true',
+                isLocked: updatedtaskData.isLocked === 'true',
+                timeout: parseInt(updatedtaskData.timeout),
+                maxRetry: parseInt(updatedtaskData.maxRetry)
             };
         } catch (err) {
             throw err;
@@ -343,17 +343,17 @@ export class RedisTaskStore implements TaskStore {
     
     async _purge(hash: string): Promise<boolean> {
         try {
-            const jobKey = this.getJobKey(hash);
-            const exists = await this.jobExists(hash);
+            const taskKey = this.getTaskKey(hash);
+            const exists = await this.taskExists(hash);
             
             if (exists) {
                 // Get the queue name for this job
-                const queueName = await this.client.hGet(jobKey, 'queue');
+                const queueName = await this.client.hGet(taskKey, 'queue');
                 
                 const multi = this.client.multi();
                 
                 // Remove job from hash storage
-                multi.del(jobKey);
+                multi.del(taskKey);
                 
                 // Remove job from queue sorted set if queue name exists
                 if (queueName) {
