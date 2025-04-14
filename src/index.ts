@@ -7,7 +7,7 @@ import { Config } from './structs/configStruct';
 import { Queue } from './structs/queueStruct';
 import { JobStore } from './structs/taskStoreStruct';
 import { JobStoreFactory } from './factory/taskStoreFactory';
-import { Job } from './structs/jobStruct';
+import { Task } from './structs/taskStruct';
 
 class zJobber {
     private eventEmitter: EventEmitter;
@@ -75,7 +75,7 @@ class zJobber {
                         if (msg === "MOVE_NEXT") {
                             
                             let hash = this.stagedJobRefs[this.currentJobIndex]
-                            let j: Job|null = await this.jobStore._fetchOne(hash)
+                            let j: Task|null = await this.jobStore._fetchOne(hash)
                             if(j) {
                                 this.stagedJobRefs.splice(this.currentJobIndex,1)
                                 await this.jobStore._purge(j.hash)
@@ -277,7 +277,7 @@ class zJobber {
     private async process(jobStageIndex: number): Promise<void> {
         try{
             const hash = this.stagedJobRefs[jobStageIndex]
-            let job: Job|null = await this.jobStore._fetchOne(hash)
+            let job: Task|null = await this.jobStore._fetchOne(hash)
 
             if (job !=  null || job != undefined) {
                 if (!job.isLocked) {

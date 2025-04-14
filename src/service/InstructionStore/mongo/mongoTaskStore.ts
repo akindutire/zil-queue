@@ -2,12 +2,12 @@ import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
-import { JobStore } from '../../../structs/taskStoreStruct';
-import { Job } from '../../../structs/jobStruct';
+import { TakStore } from '../../../structs/taskStoreStruct';
+import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 const { connect } = pkg;
 
-export class MongoJobStore implements JobStore {
+export class MongoTaskStore implements TakStore {
     
     constructor(options: { uri: string } ){ 
         //Connect to DB
@@ -34,7 +34,7 @@ export class MongoJobStore implements JobStore {
         }
     }
 
-    async _stash(queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) : Promise<Job> {
+    async _stash(queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) : Promise<Task> {
         try{
             const session = await startSession();
             try{
@@ -81,7 +81,7 @@ export class MongoJobStore implements JobStore {
        
     }
 
-    async _fetchFree(q: Queue) : Promise<Job[]>{
+    async _fetchFree(q: Queue) : Promise<Task[]>{
         try{
        
             let result
@@ -129,7 +129,7 @@ export class MongoJobStore implements JobStore {
        
     }
 
-    async _fetchOne(hash: string) : Promise<Job|null>{
+    async _fetchOne(hash: string) : Promise<Task|null>{
         try{
        
             return await m.findOne({isFailed: false, hash: hash});
@@ -140,7 +140,7 @@ export class MongoJobStore implements JobStore {
        
     }
 
-    async _fetchLocked() : Promise<Job[]>{
+    async _fetchLocked() : Promise<Task[]>{
         try{
             return await m.find({isLocked: false});
         }catch(e){
@@ -213,7 +213,7 @@ export class MongoJobStore implements JobStore {
        
     }
 
-    async _release(hash: string): Promise<Job> {
+    async _release(hash: string): Promise<Task> {
         try{
 
             const result = await m.findOne({hash: hash});

@@ -5,7 +5,7 @@ import { TaskStore } from '../../../structs/taskStoreStruct';
 import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 
-export class RedisJobStore implements TaskStore {
+export class RedisTaskStore implements TaskStore {
     private client: any;
     
     constructor(options: { uri?: string } = {}) {

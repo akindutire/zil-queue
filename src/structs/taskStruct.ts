@@ -1,4 +1,4 @@
-export interface Job {
+export interface Task {
     queue: string
     hash: string,
     payload: string,

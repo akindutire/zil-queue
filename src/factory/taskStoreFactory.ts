@@ -1,38 +1,38 @@
 import { DataSourceOptions } from "typeorm";
-import { MongoJobStore } from "../service/InstructionStore/mongo/mongoJobStore";
-import { RedisJobStore } from "../service/InstructionStore/redis/redisJobStore";
+import { MongoTaskStore } from "../service/InstructionStore/mongo/mongoTaskStore";
+import { RedisTaskStore } from "../service/InstructionStore/redis/redisTaskStore";
 import { TaskStore } from "../structs/taskStoreStruct";
 import BaseTaskStoreFactory, { InstructionStoreVariant } from "./baseTaskStoreFactory";
 import { JobberDataSource } from "../service/InstructionStore/relational/datasource/dataSource";
-import { RelationalJobStore } from "../service/InstructionStore/relational/relationalJobStore";
+import { RelationalTaskStore } from "../service/InstructionStore/relational/relationalTaskStore";
 
 export class TaskStoreFactory extends BaseTaskStoreFactory {
 
     private taskStoreInstance: TaskStore
-    public override make(jobStoreConnection: string | DataSourceOptions): TaskStore {
+    public override make(taskStoreConnection: string | DataSourceOptions): TaskStore {
         if (!this.taskStoreInstance) {
             let databaseType: InstructionStoreVariant|string
-            if (typeof jobStoreConnection == 'string') {
-                databaseType = this.detectDatabaseTypeFromConnectionString(jobStoreConnection)
+            if (typeof taskStoreConnection == 'string') {
+                databaseType = this.detectDatabaseTypeFromConnectionString(taskStoreConnection)
             } else {
-                databaseType = jobStoreConnection.type
+                databaseType = taskStoreConnection.type
             }
             
             if(typeof jobStoreConnection == 'string') {
                 if (databaseType === 'MONGO') {
-                    this.taskStoreInstance = new MongoJobStore({ uri: jobStoreConnection } )
+                    this.taskStoreInstance = new MongoTaskStore({ uri: taskStoreConnection } )
                 } else if(databaseType === "REDIS") {
-                    this.taskStoreInstance = new RedisJobStore({ uri: jobStoreConnection } )
+                    this.taskStoreInstance = new RedisTaskStore({ uri: taskStoreConnection } )
                 } else{
-                    throw Error(`Unknown database connection '${jobStoreConnection}', can not deduce data store in use, only MONGO, REDIS connection string is supported, consider DataSourceOptions for Postgres, Mysql, Sqlite and CockroachDB`)
+                    throw Error(`Unknown database connection '${taskStoreConnection}', can not deduce data store in use, only MONGO, REDIS connection string is supported, consider DataSourceOptions for Postgres, Mysql, Sqlite and CockroachDB`)
                 }
             } else {
                 let supportedType: string[] = ['cockroachdb', 'postgres', 'mysql', 'mariadb', 'mysql', "sqlite"]
-                if (!supportedType.includes(jobStoreConnection.type)) {
-                    throw Error(`Unsupported database driver ${jobStoreConnection.type} provided, only ${supportedType.join(',')}`);
+                if (!supportedType.includes(taskStoreConnection.type)) {
+                    throw Error(`Unsupported database driver ${taskStoreConnection.type} provided, only ${supportedType.join(',')}`);
                 }
-                const jobberDataSource = (new JobberDataSource(jobStoreConnection)).getDataSource();
-                this.taskStoreInstance = new RelationalJobStore(jobberDataSource)
+                const jobberDataSource = (new JobberDataSource(taskStoreConnection)).getDataSource();
+                this.taskStoreInstance = new RelationalTaskStore(taskStoreConnection)
             }
 
             return this.taskStoreInstance
