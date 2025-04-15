@@ -105,6 +105,30 @@ export class MongoTaskStore implements TaskStore {
        
     }
 
+    async _fetchFailed(q: Queue) : Promise<Task[]>{
+        try{
+       
+            let result
+            if(q.algo == "SJF") {
+                result = await f.find({isFailed: false, isLocked: false, queue: q.name.trim()}).sort({timeout: 1});
+            } else if( q.algo == "FIFO" ) {
+                result = await f.find({isFailed: false, isLocked: false, queue: q.name.trim()}).sort({createdAt: 1});
+            } else {
+                throw Error(`Queue scheduling algorithm ${q?.algo} not supported`)
+            }
+
+            if(result === null){
+                return [];                
+            }
+
+            return result;   
+        
+        }catch(e){
+            throw e;
+        }
+       
+    }
+
     async _fetchFreeHashes(q: Queue) : Promise<string[]>{
         try{
        
@@ -150,26 +174,30 @@ export class MongoTaskStore implements TaskStore {
     }
 
     async _fail(hash: string): Promise<boolean> {
-        try{
-       
-            const result = await m.findOne({hash: hash});
+        const result = await m.findOne({ hash });
+        if (!result) return false;
+        await f.create({ ...result.toObject(), isFailed: false, isLocked: false });
+        await this._purge(hash);
+        return true;
+    }
 
-            if(result === null){
-                return false;                
-            }else{
-                
-                result.isFailed = true
-                result.isLocked = false
-
-                await result.save();
-                
-                return true;
-            }
-        
-        }catch(e){
-            throw e;
+    async _restoreFailed(): Promise<number> {
+        const failedTasks = await f.find({});
+        let count = 0;
+        for (const task of failedTasks) {
+            await m.create({ ...task.toObject(), isFailed: false, isLocked: false, trial: 0 });
+            await f.deleteOne({ hash: task.hash });
+            count++;
         }
-       
+        return count;
+    }
+
+    async _restoreOneFailed(hash: string): Promise<boolean> {
+        const failedTask = await f.findOne({ hash });
+        if (!failedTask) return false;
+        await m.create({ ...failedTask.toObject(), isFailed: false, isLocked: false, trial: 0 });
+        await f.deleteOne({ hash });
+        return true;
     }
 
     async _updateTrial(hash: string) : Promise<boolean>{
@@ -309,6 +337,7 @@ const schema = new Schema({
 });
 
 const m = model('z_jobber_task_instruction_store', schema);
+const f = model('z_jobber_failed_task_instruction_store', schema);
 
 
 

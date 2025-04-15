@@ -41,6 +41,10 @@ export class RedisTaskStore implements TaskStore {
     private getTaskKey(hash: string): string {
         return `0x1_z_task_instn:${hash}`;
     }
+
+    private getFailedKey(hash: string): string {
+        return `0x1_z_failed_task:${hash}`;
+    }
     
     private getQueueKey(queueName: string): string {
         return `0x1_z_task_queue:${queueName}`;
@@ -245,23 +249,63 @@ export class RedisTaskStore implements TaskStore {
         try {
             const taskKey = this.getTaskKey(hash);
             const exists = await this.taskExists(hash);
-            
-            if (!exists) {
-                return false;
-            }
-            
+            if (!exists) return false;
+
+            const taskData = await this.client.hGetAll(taskKey);
+            if (!taskData) return false;
+
             await this.client.hSet(taskKey, {
                 isFailed: 'true',
-                isLocked: 'false',
                 modifiedAt: new Date().toISOString()
             });
-            
+
+            const failedKey = this.getFailedKey(hash);
+            await this.client.set(failedKey, JSON.stringify({
+                ...taskData,
+                isFailed: true,
+                isLocked: false,
+                trial: 0,
+                modifiedAt: new Date().toISOString()
+            }));
+
+            await this._purge(hash);
             return true;
         } catch (err) {
             throw err;
         }
     }
     
+    async _restoreFailed(): Promise<number> {
+        try {
+            const keys = await this.client.keys('0x1_z_failed_task:*');
+            let restoredCount = 0;
+            for (const key of keys) {
+                const task: Task = JSON.parse(await this.client.get(key));
+                await this._stash(task.queue, task.payload, task.args, task.maxRetry, task.timeout);
+                await this.client.del(key);
+                restoredCount++;
+            }
+            return restoredCount;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async _restoreOneFailed(hash: string): Promise<boolean> {
+        try {
+            const failedKey = this.getFailedKey(hash);
+            const exists = await this.client.exists(failedKey);
+            if (!exists) return false;
+
+            const task: Task = JSON.parse(await this.client.get(failedKey));
+            await this._stash(task.queue, task.payload, task.args, task.maxRetry, task.timeout);
+            await this.client.del(failedKey);
+            return true;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     async _updateTrial(hash: string): Promise<boolean> {
         try {
             const taskKey = this.getTaskKey(hash);
