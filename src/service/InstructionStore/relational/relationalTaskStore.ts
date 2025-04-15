@@ -106,7 +106,7 @@ export class RelationalTaskStore implements TaskStore {
 
             const job: ZTaskRelInstructionStore|null = await this.taskInstructionStoreRepo.findOne({ where: {hash: hash}})
 
-            if ( job != null && !job.isLocked ){
+            if ( job != null ){
                 job.isFailed = false;
                 job.isLocked = false;
                 job.modifiedAt = new Date().toISOString()

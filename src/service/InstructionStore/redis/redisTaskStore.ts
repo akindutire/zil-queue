@@ -176,6 +176,28 @@ export class RedisTaskStore implements TaskStore {
         }
     }
     
+    async _fetchFailed(): Promise<Task[]> {
+        try {
+            const keys = await this.client.keys(this.getFailedKey("*"));
+            if (!keys || keys.length === 0) return [];
+    
+            const failedTasks: Task[] = [];
+    
+            for (const key of keys) {
+                const data = await this.client.get(key);
+                if (data) {
+                    const task = JSON.parse(data) as Task;
+                    failedTasks.push(task);
+                }
+            }
+    
+            return failedTasks;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    
     async _fetchFreeHashes(q: Queue): Promise<string[]> {
         try {
             const tasks = await this._fetchFree(q);
@@ -264,7 +286,6 @@ export class RedisTaskStore implements TaskStore {
                 ...taskData,
                 isFailed: true,
                 isLocked: false,
-                trial: 0,
                 modifiedAt: new Date().toISOString()
             }));
 
