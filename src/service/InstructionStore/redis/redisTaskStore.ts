@@ -288,7 +288,7 @@ export class RedisTaskStore implements TaskStore {
                 modifiedAt: new Date().toISOString()
             }));
 
-            await this._purge(hash);
+            await this._purgeMainOnly(hash);
             return true;
         } catch (err) {
             throw err;
@@ -408,7 +408,38 @@ export class RedisTaskStore implements TaskStore {
     async _purge(hash: string): Promise<boolean> {
         try {
             const taskKey = this.getTaskKey(hash);
-            const exists = await this.taskExists(hash);
+            let exists = await this.taskExists(hash);
+            
+            if (exists) {
+                // Get the queue name for this job
+                const queueName = await this.client.hGet(taskKey, 'queue');
+                
+                const multi = this.client.multi();
+                
+                // Remove job from hash storage
+                multi.del(taskKey);
+                
+                // Remove job from queue sorted set if queue name exists
+                if (queueName) {
+                    const queueKey = this.getQueueKey(queueName);
+                    multi.zRem(queueKey, hash);
+                }
+
+                await multi.exec();
+            }
+
+            
+
+            return true;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    private async _purgeMainOnly(hash: string): Promise<boolean> {
+        try {
+            const taskKey = this.getTaskKey(hash);
+            let exists = await this.taskExists(hash);
             
             if (exists) {
                 // Get the queue name for this job
@@ -425,9 +456,18 @@ export class RedisTaskStore implements TaskStore {
                     multi.zRem(queueKey, hash);
                 }
                 
+
+                const failedKey = this.getFailedKey(hash);
+                exists = await this.taskExists(hash);
+                if(exists) {
+                    multi.del(failedKey);
+                }
+                
                 await multi.exec();
             }
+
             
+
             return true;
         } catch (err) {
             throw err;

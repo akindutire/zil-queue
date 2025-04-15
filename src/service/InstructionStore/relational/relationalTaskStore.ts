@@ -94,6 +94,18 @@ export class RelationalTaskStore implements TaskStore {
         try{
        
             await this.taskInstructionStoreRepo.delete({hash: hash});
+            await this.failedTaskInstructionStoreRepo.delete({hash: hash});
+            return true
+        
+        }catch(e){
+            throw e;
+        }
+    }
+
+    private async _purgeMainOnly (hash: string) : Promise<boolean> {
+        try{
+       
+            await this.taskInstructionStoreRepo.delete({hash: hash});
             return true
         
         }catch(e){
@@ -111,7 +123,7 @@ export class RelationalTaskStore implements TaskStore {
                 job.isLocked = false;
                 job.modifiedAt = new Date().toISOString()
                 await this.failedTaskInstructionStoreRepo.save(job);
-                await this._purge(hash)
+                await this._purgeMainOnly(hash)
                 return true;
             }
         

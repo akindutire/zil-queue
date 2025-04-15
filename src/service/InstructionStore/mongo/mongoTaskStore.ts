@@ -177,7 +177,7 @@ export class MongoTaskStore implements TaskStore {
         const result = await m.findOne({ hash });
         if (!result) return false;
         await f.create({ ...result.toObject(), isFailed: false, isLocked: false });
-        await this._purge(hash);
+        await this._purgeMainOnly(hash);
         return true;
     }
 
@@ -262,6 +262,19 @@ export class MongoTaskStore implements TaskStore {
     }
 
     async _purge(hash: string): Promise<boolean> {
+        try{
+       
+            await m.deleteOne({hash: hash});
+            await f.deleteOne({hash: hash});
+            return true
+        
+        }catch(e){
+            throw e;
+        }
+       
+    }
+
+    private async _purgeMainOnly(hash: string): Promise<boolean> {
         try{
        
             await m.deleteOne({hash: hash});
