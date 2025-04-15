@@ -196,7 +196,6 @@ export class RedisTaskStore implements TaskStore {
             throw err;
         }
     }
-
     
     async _fetchFreeHashes(q: Queue): Promise<string[]> {
         try {
