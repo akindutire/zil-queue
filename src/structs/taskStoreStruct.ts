@@ -16,5 +16,6 @@ export interface TaskStore {
     _fetchOne: (hash: string) => Promise<Task|null>
     _fetchLocked: (queue: Queue) => Promise<Task[]>,
     _updateTrial: (hash: string) => Promise<boolean>
+    _delay: (hash: string, period: number) => Promise<boolean>,
     _disconnect: () => Promise<void> 
 }

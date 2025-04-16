@@ -325,8 +325,13 @@ class zJobber {
         }
     }
 
-    public static async delayTask(hash: string, period: int) : Promise<boolean> {
-
+    public static async delayTask(hash: string, period: number) : Promise<boolean> {
+        try {
+            return await global.zJobberCtx.taskStore._delay(hash, period)
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
     }
 
     public static async restoreAll() : Promise<number> {
