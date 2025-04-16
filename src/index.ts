@@ -19,6 +19,11 @@ class zJobber {
     private queueFlatMap: string[] = [];
     private taskStore: TaskStore
      
+    /**
+     * Setup Jobber
+     * @param queues 
+     * @param config 
+     */
     constructor(private queues: Queue[], private config: Config) {
         if(isMainThread) {
             new Promise( (resolve, reject) => {
@@ -223,6 +228,9 @@ class zJobber {
         }
     }
      
+    /**
+     * Iterator 
+     */
     private async next(): Promise<void> {
         try{
             this.currentJobIndex = 0 
@@ -238,6 +246,10 @@ class zJobber {
         }
     }
 
+    /**
+     * Processor
+     * @param jobStageIndex 
+     */
     private async process(jobStageIndex: number): Promise<void> {
         try{
             const hash = this.stagedTaskRefs[jobStageIndex]
@@ -279,7 +291,14 @@ class zJobber {
     }
 
     // Code API
-
+    /**
+     * Register a new task
+     * @param queueName 
+     * @param payload 
+     * @param args 
+     * @param options 
+     * @returns 
+     */
     public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number, delayPeriod: number}> ) : Promise<{ hash: string, pos: number }> {
         try{
             //Pick jobber from global context
@@ -307,6 +326,11 @@ class zJobber {
         }
     }
 
+    /**
+     * Remove a task entirely , free or failed
+     * @param hash 
+     * @returns 
+     */
     public static async purge(hash: string): Promise<boolean> {
         try {
             return await global.zJobberCtx.taskStore._purge(hash)
@@ -316,6 +340,11 @@ class zJobber {
         }
     }
 
+    /**
+     * Restore a failed task
+     * @param hash 
+     * @returns 
+     */
     public static async restoreTask(hash: string) : Promise<boolean> {
         try {
             return await global.zJobberCtx.taskStore._restoreOneFailed(hash)
@@ -325,15 +354,10 @@ class zJobber {
         }
     }
 
-    public static async delayTask(hash: string, period: number) : Promise<boolean> {
-        try {
-            return await global.zJobberCtx.taskStore._delay(hash, period)
-        } catch (e) {
-            console.error(e);
-            throw e; // Re-throw the error after logging
-        }
-    }
-
+    /**
+     * Retores all failed tasks
+     * @returns 
+     */
     public static async restoreAll() : Promise<number> {
         try {
             return await global.zJobberCtx.taskStore._restoreFailed()
@@ -343,6 +367,27 @@ class zJobber {
         }
     }
 
+
+    /**
+     * Delay execution of a free task
+     * @param hash 
+     * @param period 
+     * @returns 
+     */
+    public static async delayTask(hash: string, period: number) : Promise<boolean> {
+        try {
+            return await global.zJobberCtx.taskStore._delay(hash, period)
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+   
+    /**
+     * Get list of free tasks
+     * @param queueName 
+     * @returns 
+     */
     public static async listFree(queueName: string) : Promise<Task[]> {
         try {
             let queues = global.zJobberCtx.queues.filter( (q) => { return q.name ==  queueName } )
@@ -356,6 +401,11 @@ class zJobber {
         }
     }
 
+    /**
+     * Get list of failed tasks
+     * @param queueName 
+     * @returns 
+     */
     public static async listFailed(queueName: string) : Promise<Task[]> {
         try {
             let queues = global.zJobberCtx.queues.filter( (q) => { return q.name ==  queueName } )
