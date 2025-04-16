@@ -325,33 +325,6 @@ export class RedisTaskStore implements TaskStore {
             throw err;
         }
     }
-
-    async _updateTrial(hash: string): Promise<boolean> {
-        try {
-            const taskKey = this.getTaskKey(hash);
-            const taskData = await this.client.hGetAll(taskKey);
-            
-            if (!taskData) {
-                return false;
-            }
-            
-            if (taskData.isLocked === 'false') {
-                const newTrial = parseInt(taskData.trial) + 1;
-                
-                await this.client.hSet(taskKey, {
-                    trial: newTrial,
-                    isLocked: 'true',
-                    modifiedAt: new Date().toISOString()
-                });
-                
-                return true;
-            }
-            
-            return false;
-        } catch (err) {
-            throw err;
-        }
-    }
     
     async _lock(hash: string): Promise<boolean> {
         try {
@@ -474,6 +447,59 @@ export class RedisTaskStore implements TaskStore {
         }
     }
     
+
+    async _updateTrial(hash: string): Promise<boolean> {
+        try {
+            const taskKey = this.getTaskKey(hash);
+            const taskData = await this.client.hGetAll(taskKey);
+            
+            if (!taskData) {
+                return false;
+            }
+            
+            if (taskData.isLocked === 'false') {
+                const newTrial = parseInt(taskData.trial) + 1;
+                
+                await this.client.hSet(taskKey, {
+                    trial: newTrial,
+                    isLocked: 'true',
+                    modifiedAt: new Date().toISOString()
+                });
+                
+                return true;
+            }
+            
+            return false;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async _delay (hash: string, period: number) : Promise<boolean>{
+        try {
+            const taskKey = this.getTaskKey(hash);
+            const taskData = await this.client.hGetAll(taskKey);
+            
+            if (!taskData) {
+                return false;
+            }
+            
+            if (taskData.isLocked === 'false') {
+                
+                await this.client.hSet(taskKey, {
+                    delay: period,
+                    modifiedAt: new Date().toISOString()
+                });
+                
+                return true;
+            }
+            
+            return false;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     async _disconnect(): Promise<void> {
         if (this.client && this.client.isOpen) {
             await this.client.quit();

@@ -340,6 +340,27 @@ export class RelationalTaskStore implements TaskStore {
         }
     }
 
+    async _delay (hash: string, period: number) : Promise<boolean>{
+        try{
+
+            const task = await this.taskInstructionStoreRepo.findOne({ where: {hash} })
+            if(!task?.isLocked) {
+                const result = await this.taskInstructionStoreRepo.update(
+                    { hash: hash },
+                    { 
+                      delay: period
+                    }
+                  );
+                  return (result?.affected ?? 0) > 0;
+            }
+              
+            return false
+            
+        }catch(e){
+            throw e;
+        }
+    }
+
     async _disconnect(): Promise<void> {
         try {
             if (this.connectionDataSource.isInitialized) {

@@ -200,27 +200,6 @@ export class MongoTaskStore implements TaskStore {
         return true;
     }
 
-    async _updateTrial(hash: string) : Promise<boolean>{
-        try{
-
-            const result = await m.findOne({hash: hash});
-
-            if ( !result.isLocked ){
-                result.trial = parseInt(result.trial) + 1;
-                result.isLocked = true
-                result.modifiedAt = new Date().toISOString()
-                await result.save();
-                return true;
-            }
-        
-            return false;
-            
-        }catch(e){
-            throw e;
-        }
-       
-    }
-
     async _lock(hash: string): Promise<boolean> {
         try{
 
@@ -284,6 +263,44 @@ export class MongoTaskStore implements TaskStore {
             throw e;
         }
        
+    }
+
+    async _updateTrial(hash: string) : Promise<boolean>{
+        try{
+
+            const result = await m.findOne({hash: hash});
+
+            if ( !result?.isLocked ){
+                result.trial = parseInt(result.trial) + 1;
+                result.isLocked = true
+                result.modifiedAt = new Date().toISOString()
+                await result.save();
+                return true;
+            }
+        
+            return false;
+            
+        }catch(e){
+            throw e;
+        }
+       
+    }
+
+    async _delay (hash: string, period: number) : Promise<boolean>{
+        try{
+
+            const task = await m.findOne({ where: {hash} })
+            if(!task?.isLocked) {
+                task.delay = period
+                task.modifiedAt = new Date().toISOString()
+                await task.save()
+            }
+              
+            return true
+            
+        }catch(e){
+            throw e;
+        }
     }
 
     async _disconnect(): Promise<void> {
