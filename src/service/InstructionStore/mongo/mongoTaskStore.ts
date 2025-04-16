@@ -326,6 +326,12 @@ const schema = new Schema({
         type: Number,
         default: 0
     },
+
+    delay: {
+        type: Number,
+        default: 0
+    },
+
     isLocked: {
         type: Boolean,
         default: false

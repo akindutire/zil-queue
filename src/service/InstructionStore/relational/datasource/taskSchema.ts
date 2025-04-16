@@ -34,6 +34,9 @@ export class ZTaskRelInstructionStore {
     @Column({default: -1})
     timeout: number
 
+    @Column({default: 0})
+    delay: number
+    
     @CreateDateColumn({default: new Date().toISOString()})
     createdAt: string
 

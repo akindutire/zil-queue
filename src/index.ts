@@ -222,42 +222,6 @@ class zJobber {
             console.error(e);
         }
     }
-
-    public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number}> ) : Promise<{ hash: string, pos: number }> {
-        try{
-            //Pick jobber from global context
-            if(!zJobberCtx.queueFlatMap.includes(queueName)) {
-                throw new Error(`${queueName} not found on queue priority list`) 
-            }
-
-            let defaultopts:{maxRetry: number, timeout: number}  = { maxRetry: 3, timeout: 50000}
-
-            let newOptions =  { ...defaultopts, ...options}
-
-            let fn = serialize(payload)
-            
-            const task = await global.zJobberCtx.taskStore._stash(queueName, fn, args, newOptions.maxRetry, newOptions.timeout)
-          
-            const pos = await global.zJobberCtx.taskStore._count()
-
-            //Inform queue
-            zJobberCtx.eventEmitter.emit("newTask")
-                
-            return { hash: task.hash, pos: pos }
-        }catch(e) {
-            console.error(e);
-            throw e; // Re-throw the error after logging
-        }
-    }
-
-    public static async purge(hash: string): Promise<boolean> {
-        try {
-            return await global.zJobberCtx.taskStore._purge(hash)
-        } catch (e) {
-            console.error(e);
-            throw e; // Re-throw the error after logging
-        }
-    }
      
     private async next(): Promise<void> {
         try{
@@ -313,6 +277,94 @@ class zJobber {
             console.error(e);
         }
     }
+
+    // Code API
+
+    public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number, delayPeriod: number}> ) : Promise<{ hash: string, pos: number }> {
+        try{
+            //Pick jobber from global context
+            if(!zJobberCtx.queueFlatMap.includes(queueName)) {
+                throw new Error(`${queueName} not found on queue priority list`) 
+            }
+
+            let defaultopts:{maxRetry: number, timeout: number, delayPeriod: number}  = { maxRetry: 3, timeout: 50000, delayPeriod: 0}
+
+            let newOptions =  { ...defaultopts, ...options}
+
+            let fn = serialize(payload)
+            
+            const task = await global.zJobberCtx.taskStore._stash(queueName, fn, args, newOptions.maxRetry, newOptions.timeout)
+          
+            const pos = await global.zJobberCtx.taskStore._count()
+
+            //Inform queue
+            zJobberCtx.eventEmitter.emit("newTask")
+                
+            return { hash: task.hash, pos: pos }
+        }catch(e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async purge(hash: string): Promise<boolean> {
+        try {
+            return await global.zJobberCtx.taskStore._purge(hash)
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async restoreTask(hash: string) : Promise<boolean> {
+        try {
+            return await global.zJobberCtx.taskStore._restoreOneFailed(hash)
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async delayTask(hash: string, period: int) : Promise<boolean> {
+
+    }
+
+    public static async restoreAll() : Promise<number> {
+        try {
+            return await global.zJobberCtx.taskStore._restoreFailed()
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async listFree(queueName: string) : Promise<Task[]> {
+        try {
+            let queues = global.zJobberCtx.queues.filter( (q) => { return q.name ==  queueName } )
+            if(queues.length == 0)
+                return []
+
+            return await global.zJobberCtx.taskStore._fetchFree(queues[0])
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+    public static async listFailed(queueName: string) : Promise<Task[]> {
+        try {
+            let queues = global.zJobberCtx.queues.filter( (q) => { return q.name ==  queueName } )
+            if(queues.length == 0)
+                return []
+
+            return await global.zJobberCtx.taskStore._fetchFailed(queues[0])
+        } catch (e) {
+            console.error(e);
+            throw e; // Re-throw the error after logging
+        }
+    }
+
+
 
 }
 
