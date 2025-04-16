@@ -63,7 +63,7 @@ class zJobber {
                 })
                 .then( async (data) => {
                     // Setup Node Service worker
-                    this.nodeWorker =  new Worker(join("./worker/jobWorker.js"));
+                    this.nodeWorker =  new Worker(join(process.cwd()+"/worker/taskWorker.js"));
                     this.tag = this.config.workerTag??this.internalConfig.tag
                     process.stdout.write(`------ ${this.tag} Worker started ------`);
                     return Promise.resolve(true)
