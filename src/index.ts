@@ -248,37 +248,42 @@ class zJobber {
 
     /**
      * Processor
-     * @param jobStageIndex 
+     * @param taskStageIndex 
      */
-    private async process(jobStageIndex: number): Promise<void> {
+    private async process(taskStageIndex: number): Promise<void> {
         try{
-            const hash = this.stagedTaskRefs[jobStageIndex]
-            let job: Task|null = await this.taskStore._fetchOne(hash)
+            const hash = this.stagedTaskRefs[taskStageIndex]
+            let task: Task|null = await this.taskStore._fetchOne(hash)
 
-            if (job !=  null || job != undefined) {
-                if (!job.isLocked) {
+            if (task) {
+                if (!task.isLocked) {
                     
-                    if(typeof job.payload != 'string'){
-                        process.stdout.write(`${this.tag} Skipping ${job.hash}`)
-                        this.stagedTaskRefs.splice(jobStageIndex, 1)
+                    if(typeof task.payload != 'string'){
+                        process.stdout.write(`${this.tag} Skipping ${task.hash}`)
+                        this.stagedTaskRefs.splice(taskStageIndex, 1)
                         this.next()
                     }else{
-                        
+                        const future = new Date(new Date(task.createdAt).getTime() + ((task.delay || 0) * 1000));
+                        if(future > new Date()) {
+                            process.stdout.write(`${this.tag} Skipping item ${hash}, Task delayed till ${future}`);
+                            this.stagedTaskRefs.splice(taskStageIndex, 1)
+                            this.next()
+                        }
                         //Auto lock
-                        await this.taskStore._updateTrial(job.hash)
-                        this.nodeWorker.postMessage({tag: this.tag, hash: job.hash, args: job.args.join(','), payload: job.payload, mr: job.maxRetry, ts: job.timeout, tr: job.trial})
+                        await this.taskStore._updateTrial(task.hash)
+                        this.nodeWorker.postMessage({tag: this.tag, hash: task.hash, args: task.args.join(','), payload: task.payload, mr: task.maxRetry, ts: task.timeout, tr: task.trial})
 
                     }
                     
                 }else{
-                    process.stdout.write(`${this.tag} Skipping ${job.hash}`)
-                    this.stagedTaskRefs.splice(jobStageIndex, 1)
+                    process.stdout.write(`${this.tag} Skipping ${task.hash}, Task is locked`)
+                    this.stagedTaskRefs.splice(taskStageIndex, 1)
                     this.next()
                 }
             }else{
                 //incase of disjoint
                 if(this.stagedTaskRefs.length > 0){
-                    this.stagedTaskRefs.splice(jobStageIndex, 1)
+                    this.stagedTaskRefs.splice(taskStageIndex, 1)
                     this.next()
                 }else{
                     process.stdout.write(`${this.tag} Queue relaxed, no task to process`)

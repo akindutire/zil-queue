@@ -21,5 +21,7 @@ export interface TaskStore {
 }
 
 export interface TaskOptions {
-    maxRetry: number, timeout: number, delay: number 
+    maxRetry: number, 
+    timeout: number, // In seconds
+    delay: number //In seconds
 }
