@@ -2,7 +2,7 @@ import md5 from 'md5';
 import pkg from 'mongoose';
 const { startSession, Schema, model } = pkg;
 import { v4 as uuidv4 } from 'uuid';
-import { TaskStore } from '../../../structs/taskStoreStruct';
+import { TaskOptions, TaskStore } from '../../../structs/taskStoreStruct';
 import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 const { connect } = pkg;
@@ -34,7 +34,7 @@ export class MongoTaskStore implements TaskStore {
         }
     }
 
-    async _stash(queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) : Promise<Task> {
+    async _stash(queueName: string, payload: string, args: any[], options: TaskOptions) : Promise<Task> {
         try{
             const session = await startSession();
             try{
@@ -48,10 +48,11 @@ export class MongoTaskStore implements TaskStore {
                         hash: hash,
                         payload: payload,
                         args: args,
-                        timeout: timeout,
+                        timeout: options.timeout,
                         trial: 0,
                         isFailed: false,
-                        maxRetry: maxRetry,
+                        maxRetry: options.maxRetry,
+                        delay: options.delay,
                         createdAt : new Date().toISOString(),
                         modifiedAt : new Date().toISOString()
                     }); 

@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import md5 from 'md5';
 import { v4 as uuidv4 } from 'uuid';
-import { TaskStore } from '../../../structs/taskStoreStruct';
+import { TaskOptions, TaskStore } from '../../../structs/taskStoreStruct';
 import { Task } from '../../../structs/taskStruct';
 import { Queue } from '../../../structs/queueStruct';
 
@@ -54,7 +54,7 @@ export class RedisTaskStore implements TaskStore {
         return await this.client.exists(this.getTaskKey(hash)) === 1;
     }
     
-    async _stash(queueName: string, payload: string, args: any[], maxRetry: number, timeout: number): Promise<Task> {
+    async _stash(queueName: string, payload: string, args: any[], options: TaskOptions): Promise<Task> {
         try {
             const hash = this.calculateTaskHash(queueName, payload);
             const taskKey = this.getTaskKey(hash);
@@ -66,11 +66,12 @@ export class RedisTaskStore implements TaskStore {
                 hash: hash,
                 payload: payload,
                 args: args,
-                timeout: timeout,
+                timeout: options.timeout,
                 trial: 0,
                 isFailed: false,
                 isLocked: false,
-                maxRetry: maxRetry,
+                maxRetry: options.maxRetry,
+                delay: options.delay,
                 createdAt: now,
                 modifiedAt: now
             };
@@ -83,19 +84,20 @@ export class RedisTaskStore implements TaskStore {
                 hash: hash,
                 payload: JSON.stringify(payload),
                 args: JSON.stringify(args),
-                timeout: timeout,
+                timeout: options.timeout,
                 trial: 0,
                 isFailed: "false",
                 isLocked: "false",
-                maxRetry: maxRetry,
+                maxRetry: options.maxRetry,
+                delay: options.delay,
                 createdAt: now,
                 modifiedAt: now
             });
             
             // Add job hash to queue sorted set with score based on created time
-            if (timeout > 0) {
+            if (options.timeout > 0) {
                 // For SJF algorithm, we use timeout as the score
-                multi.zAdd(queueKey, { score: timeout, value: hash });
+                multi.zAdd(queueKey, { score: options.timeout, value: hash });
             } else {
                 // For FIFO algorithm, we use timestamp as the score
                 multi.zAdd(queueKey, { score: Date.now(), value: hash });
@@ -301,7 +303,7 @@ export class RedisTaskStore implements TaskStore {
             let restoredCount = 0;
             for (const key of keys) {
                 const task: Task = JSON.parse(await this.client.get(key));
-                await this._stash(task.queue, task.payload, task.args, task.maxRetry, task.timeout);
+                await this._stash(task.queue, task.payload, task.args, {maxRetry: task.maxRetry, timeout: task.timeout, delay: task.delay});
                 await this.client.del(key);
                 restoredCount++;
             }
@@ -318,7 +320,7 @@ export class RedisTaskStore implements TaskStore {
             if (!exists) return false;
 
             const task: Task = JSON.parse(await this.client.get(failedKey));
-            await this._stash(task.queue, task.payload, task.args, task.maxRetry, task.timeout);
+            await this._stash(task.queue, task.payload, task.args, {maxRetry: task.maxRetry, timeout: task.timeout, delay: task.delay});
             await this.client.del(failedKey);
             return true;
         } catch (err) {

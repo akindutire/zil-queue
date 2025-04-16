@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 import serialize from 'serialize-javascript';
 import { Config } from './structs/configStruct';
 import { Queue } from './structs/queueStruct';
-import { TaskStore } from './structs/taskStoreStruct';
+import { TaskOptions, TaskStore } from './structs/taskStoreStruct';
 import { TaskStoreFactory } from './factory/taskStoreFactory';
 import { Task } from './structs/taskStruct';
 
@@ -299,20 +299,20 @@ class zJobber {
      * @param options 
      * @returns 
      */
-    public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<{maxRetry: number, timeout: number, delayPeriod: number}> ) : Promise<{ hash: string, pos: number }> {
+    public static async dispatch(queueName: string, payload: Function, args = [], options: Partial<TaskOptions> ) : Promise<{ hash: string, pos: number }> {
         try{
             //Pick jobber from global context
             if(!zJobberCtx.queueFlatMap.includes(queueName)) {
                 throw new Error(`${queueName} not found on queue priority list`) 
             }
 
-            let defaultopts:{maxRetry: number, timeout: number, delayPeriod: number}  = { maxRetry: 3, timeout: 50000, delayPeriod: 0}
+            let defaultopts:TaskOptions  = { maxRetry: 3, timeout: 50000, delay: 0}
 
             let newOptions =  { ...defaultopts, ...options}
 
             let fn = serialize(payload)
             
-            const task = await global.zJobberCtx.taskStore._stash(queueName, fn, args, newOptions.maxRetry, newOptions.timeout)
+            const task = await global.zJobberCtx.taskStore._stash(queueName, fn, args, newOptions)
           
             const pos = await global.zJobberCtx.taskStore._count()
 

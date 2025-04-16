@@ -1,5 +1,5 @@
 import { DataSource, Repository } from "typeorm";
-import { TaskStore } from "../../../structs/taskStoreStruct";
+import { TaskOptions, TaskStore } from "../../../structs/taskStoreStruct";
 import { Task } from "../../../structs/taskStruct";
 import { Queue } from "../../../structs/queueStruct";
 import { ZTaskRelInstructionStore } from "./datasource/taskSchema";
@@ -33,15 +33,16 @@ export class RelationalTaskStore implements TaskStore {
             }
         }
 
-    async _stash (queueName: string, payload: string, args: any[], maxRetry: number, timeout: number) : Promise<Task> {
+    async _stash (queueName: string, payload: string, args: any[], options: TaskOptions) : Promise<Task> {
         const job = new ZTaskRelInstructionStore()
 
         job.hash = this.calculateTaskHash(queueName, payload);
         job.queue = queueName
         job.payload = payload
         job.args = args
-        job.maxRetry = maxRetry
-        job.timeout = timeout
+        job.maxRetry = options.maxRetry
+        job.timeout = options.timeout
+        job.delay = options.delay
         job.createdAt = new Date().toISOString()
         job.modifiedAt = new Date().toISOString()
        

@@ -8,6 +8,7 @@ export interface Task {
     maxRetry: number,
     trial: number,
     timeout: number,
+    delay: number,
     createdAt: string,
     modifiedAt: string,
 }

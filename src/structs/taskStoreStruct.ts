@@ -2,7 +2,7 @@ import { Task } from "./taskStruct"
 import { Queue } from "./queueStruct"
 
 export interface TaskStore {
-    _stash: (queueName: string, payload: string, args: any[], maxRetry:number, timeout:number) => Promise<Task>,
+    _stash: (queueName: string, payload: string, args: any[], newOptions: TaskOptions) => Promise<Task>,
     _lock: (hash: string) => Promise<boolean>,
     _release: (hash: string) => Promise<Task>,
     _purge: (hash: string) => Promise<boolean>,
@@ -18,4 +18,8 @@ export interface TaskStore {
     _updateTrial: (hash: string) => Promise<boolean>
     _delay: (hash: string, period: number) => Promise<boolean>,
     _disconnect: () => Promise<void> 
+}
+
+export interface TaskOptions {
+    maxRetry: number, timeout: number, delay: number 
 }
