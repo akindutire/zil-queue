@@ -18,7 +18,7 @@ export class TaskStoreFactory extends BaseTaskStoreFactory {
                 databaseType = taskStoreConnection.type
             }
             
-            if(typeof jobStoreConnection == 'string') {
+            if(typeof taskStoreConnection == 'string') {
                 if (databaseType === 'MONGO') {
                     this.taskStoreInstance = new MongoTaskStore({ uri: taskStoreConnection } )
                 } else if(databaseType === "REDIS") {
@@ -32,7 +32,7 @@ export class TaskStoreFactory extends BaseTaskStoreFactory {
                     throw Error(`Unsupported database driver ${taskStoreConnection.type} provided, only ${supportedType.join(',')}`);
                 }
                 const jobberDataSource = (new JobberDataSource(taskStoreConnection)).getDataSource();
-                this.taskStoreInstance = new RelationalTaskStore(taskStoreConnection)
+                this.taskStoreInstance = new RelationalTaskStore(jobberDataSource)
             }
 
             return this.taskStoreInstance
